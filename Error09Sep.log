@@ -1,0 +1,32 @@
+08:01:59 ANON Exception
+java.text.ParseException: Unparseable date: "12:34:56"
+	at java.text.DateFormat.parse(DateFormat.java:357)
+	at org.cbc.utils.system.DateFormatter.parseDate(DateFormatter.java:85)
+	at org.cbc.sql.SQLBuilder$ParameterValue.set(SQLBuilder.java:129)
+	at org.cbc.sql.SQLBuilder.setParameter(SQLBuilder.java:241)
+	at org.cbc.utils.Main.testSQLBuilder(Main.java:77)
+	at org.cbc.utils.Main.main(Main.java:114)
+08:05:22 ANON Exception
+java.text.ParseException: Unparseable date: "12:34:56"
+	at java.text.DateFormat.parse(DateFormat.java:357)
+	at org.cbc.utils.system.DateFormatter.parseDate(DateFormatter.java:85)
+	at org.cbc.sql.SQLBuilder$ParameterValue.set(SQLBuilder.java:129)
+	at org.cbc.sql.SQLBuilder.setParameter(SQLBuilder.java:241)
+	at org.cbc.utils.Main.testSQLBuilder(Main.java:77)
+	at org.cbc.utils.Main.main(Main.java:114)
+08:08:56 ANON Exception
+java.text.ParseException: Unparseable date: "12:34:56"
+	at java.text.DateFormat.parse(DateFormat.java:357)
+	at org.cbc.utils.system.DateFormatter.parseDate(DateFormatter.java:86)
+	at org.cbc.sql.SQLBuilder$ParameterValue.set(SQLBuilder.java:129)
+	at org.cbc.sql.SQLBuilder.setParameter(SQLBuilder.java:241)
+	at org.cbc.utils.Main.testSQLBuilder(Main.java:77)
+	at org.cbc.utils.Main.main(Main.java:114)
+08:14:36 ANON Exception
+java.text.ParseException: Unparseable date: "12:34:56"
+	at java.text.DateFormat.parse(DateFormat.java:357)
+	at org.cbc.utils.system.DateFormatter.parseDate(DateFormatter.java:86)
+	at org.cbc.sql.SQLBuilder$ParameterValue.set(SQLBuilder.java:129)
+	at org.cbc.sql.SQLBuilder.setParameter(SQLBuilder.java:241)
+	at org.cbc.utils.Main.testSQLBuilder(Main.java:77)
+	at org.cbc.utils.Main.main(Main.java:121)

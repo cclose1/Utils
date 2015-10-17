@@ -1,0 +1,30 @@
+11:58:00 ANON SELECT  
+    SeqNo,
+    SessionId,
+    UserId,
+    Last,
+    Accesses,
+    Deadlocks,
+    MaxIdleTime
+FROM Session
+WHERE SessionId = ?SessionId AND State = ?State AND P1 = ?Date AND P2 = ?Time AND P3 = ?TimeStamp AND P4 = ?Int
+11:59:27 ANON SELECT  
+    SeqNo,
+    SessionId,
+    UserId,
+    Last,
+    Accesses,
+    Deadlocks,
+    MaxIdleTime
+FROM Session
+WHERE SessionId = ?SessionId AND State = ?State AND P1 = ?Date AND P2 = ?Time AND P3 = ?TimeStamp AND P4 = ?Int
+12:01:42 ANON SELECT  
+    SeqNo,
+    SessionId,
+    UserId,
+    Last,
+    Accesses,
+    Deadlocks,
+    MaxIdleTime
+FROM Session
+WHERE SessionId = ?SessionId AND State = ?State AND P1 = ?Date AND P2 = ?Time AND P3 = ?TimeStamp AND P4 = ?Int
