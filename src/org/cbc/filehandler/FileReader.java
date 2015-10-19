@@ -23,7 +23,7 @@ import java.util.zip.ZipFile;
 
 /**
  *
- * @author CClose changed again 18-Oct-15
+ * @author CClose changed again 19-Oct-15
  */
 public class FileReader {
     private Logger              log               = new Logger();
