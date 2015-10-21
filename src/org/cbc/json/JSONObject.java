@@ -242,14 +242,15 @@ public class JSONObject implements Iterable<JSONNameValue>{
             for (int i = 1; i <= count; i++) {
                 String value = rs.getString(i);   
                 Column hdr   = columns.get(i - 1);                
+                String type  = hdr.type.toLowerCase();
                 
                 if (value == null)
                     col.add(new JSONValue(value));
-                else if (hdr.type.equalsIgnoreCase("int"))                    
+                else if (type.equals("int"))                    
                     col.add(new JSONValue(rs.getInt(i)));
-                else if (hdr.type.equalsIgnoreCase("decimal"))                    
+                else if (type.equals("decimal"))                    
                     col.add(new JSONValue(rs.getDouble(i), hdr.scale));
-                else if (!fractionalSeconds && (hdr.type.equals("datetime") || hdr.type.equals("time"))) {
+                else if (!fractionalSeconds && (type.equals("datetime") || type.equals("time"))) {
                     String flds[] = value.split("\\.", 2);
                     
                     col.add(new JSONValue(flds[0]));
