@@ -218,7 +218,7 @@ public class JSONObject implements Iterable<JSONNameValue>{
         for (int i = 1; i <= count; i++) {
             JSONObject col;
             Column     hdr      = new Column();
-            String     field    = rs.getMetaData().getColumnName(i);
+            String     field    = rs.getMetaData().getColumnLabel(i);
             Field      optional = fields.get(field);
             
             columns.add(hdr);
