@@ -160,13 +160,18 @@ public class DatabaseSession {
     private int        statementTimeout    = 0;
     private int        defaultIsolation    = 0;
 
-    public String delimitName(String name) {
-        if (name.equalsIgnoreCase("transaction") ||
-            name.equalsIgnoreCase("database")    ||
-            name.equalsIgnoreCase("index")       ||
-            name.equalsIgnoreCase("sent")) return '[' + name + ']';
-        
+    public static String delimitName(String name, String protocol) {
+        if (protocol.equalsIgnoreCase("sqlserver")) {
+            if (name.equalsIgnoreCase("transaction") ||
+                name.equalsIgnoreCase("database")    ||
+                name.equalsIgnoreCase("index")       ||
+                name.equalsIgnoreCase("sent")        ||
+                name.equalsIgnoreCase("end")) return '[' + name + ']';
+        }
         return name;
+    }
+    public String delimitName(String name) {
+        return delimitName(name, protocol);
     }
     public void logException(Exception exception) {
         if (reportException) {

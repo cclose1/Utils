@@ -24,7 +24,7 @@ public class SQLInsertBuilder extends SQLBuilder {
         for (Field f : fields) {
             sql.append(sep);
             sql.append("\r\n    ");
-            sql.append(f.name);
+            sql.append(f.getName());
             values.append(sep);
             values.append("\r\n    ");
             values.append(f.getValue());

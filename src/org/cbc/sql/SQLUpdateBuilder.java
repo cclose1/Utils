@@ -24,7 +24,7 @@ public class SQLUpdateBuilder extends SQLBuilder {
         for (Field f : fields) {
             sql.append(sep);
             sql.append("\r\n    ");
-            sql.append(f.name + " = " + f.getValue());
+            sql.append(f.getName() + " = " + f.getValue());
             sep = ',';
         }
         addWhere(sql);

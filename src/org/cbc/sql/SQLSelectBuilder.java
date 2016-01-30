@@ -34,28 +34,31 @@ public class SQLSelectBuilder extends SQLBuilder {
         addField(name, null, alias);
     }
     public void addDefaultedField(String name, String nullDefault) {
-        addField(null, "COALESCE(" + name + ", '" + nullDefault + "')", name);
+        addField(null, "COALESCE(" + name + ", '" + nullDefault + "')", name, false);
     }
     public void addDefaultedField(String name, String alias, String nullDefault) {
-        addField(null, "COALESCE(" + name + ", '" + nullDefault + "')", alias);
+        addField(null, "COALESCE(" + name + ", '" + nullDefault + "')", alias, false);
     }
     public void addDefaultedField(String name, int nullDefault) {
-        addField(null, "COALESCE(" + name + ", " + nullDefault + ")", name);
+        addField(null, "COALESCE(" + name + ", " + nullDefault + ")", name, false);
     }
     public void addDefaultedField(String name, String alias, int nullDefault) {
-        addField(null, "COALESCE(" + name + ", " + nullDefault + ")", alias);
+        addField(null, "COALESCE(" + name + ", " + nullDefault + ")", alias, false);
     }
     public void addDefaultedField(String name, String alias, int nullDefault, int precision) {
         if (precision == 0)
-            addField(null, "CAST(COALESCE(" + name + ", " + nullDefault + ") AS " + (protocol.equalsIgnoreCase("mysql")? "SIGNED" : "INT") + ")", alias);
+            addField(null, "CAST(COALESCE(" + name + ", " + nullDefault + ") AS " + (protocol.equalsIgnoreCase("mysql")? "SIGNED" : "INT") + ")", alias, false);
         else
-            addField(null, "CAST(COALESCE(" + name + ", " + nullDefault + ") AS DECIMAL(12," + precision + "))", alias);
+            addField(null, "CAST(COALESCE(" + name + ", " + nullDefault + ") AS DECIMAL(12," + precision + "))", alias, false);
     }
     public void addDefaultedField(String name, int nullDefault, int precision) {
         addDefaultedField(name, name, nullDefault, precision);
     }
     public void addValueField(String alias, String value) {
         addField(null, value, alias);
+    }
+    public void addValueField(String alias, String value, boolean quoted) {
+        addField(null, value, alias, quoted);
     }
     public void setFrom(String from) {
         this.from = from;
@@ -79,12 +82,12 @@ public class SQLSelectBuilder extends SQLBuilder {
             for (Field f : fields) {
                 sql.append(sep);
                 sql.append("\r\n    ");
-                sql.append(f.name == null? f.value : f.name);
+                sql.append(f.getName() == null? f.getValue() : f.getName());
                 sep = ',';
             
-                if (f.alias != null) {
+                if (f.getAlias() != null) {
                     sql.append(" AS ");
-                    sql.append(f.alias);
+                    sql.append(f.getAlias());
                 }
             }
         }

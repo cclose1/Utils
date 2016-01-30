@@ -31,10 +31,10 @@ public abstract class SQLBuilder {
     private SimpleDateFormat                fmtTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
     protected class Field {
-        public String  name;
-        public String  value;
-        public String  alias;
-        public boolean quoted;
+        private String  name;
+        private String  value;
+        private String  alias;
+        private boolean quoted;
 
         public Field(String name, String value, String alias, boolean quoted) {
             this.name   = name;
@@ -48,8 +48,23 @@ public abstract class SQLBuilder {
             this.alias = alias;
             quoted     = false;
         }
+        public String getName() {
+            if (name == null) return null;
+            
+            return DatabaseSession.delimitName(name, protocol);
+        }
         public String getValue() {
-            return value == null? "null" : quoted? '\'' + DatabaseSession.escape(value) + '\'' : value;
+            return value == null? "null" : isQuoted()? '\'' + DatabaseSession.escape(value) + '\'' : value;
+        }
+        public String getAlias() {
+            return alias;
+        }
+
+        /**
+         * @return the quoted
+         */
+        public boolean isQuoted() {
+            return quoted;
         }
     }
     public void setTable(String table) {

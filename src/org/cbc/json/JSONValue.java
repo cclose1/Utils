@@ -6,6 +6,8 @@ package org.cbc.json;
 
 import java.io.InputStream;
 import java.io.StringReader;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 
 /**
@@ -215,6 +217,21 @@ public class JSONValue {
      * 
      * @param format
      */
+    public static JSONValue getJSONValue(ResultSet rs, int i, boolean fractionalSeconds) throws SQLException {
+        String value = rs.getString(i);   
+        String type  = rs.getMetaData().getColumnTypeName(i).toLowerCase();
+        
+        if (value == null)          return new JSONValue(value);
+        if (type.equals("int"))     return new JSONValue(rs.getInt(i));
+        if (type.equals("decimal")) return new JSONValue(rs.getDouble(i), rs.getMetaData().getScale(i));
+        if (!fractionalSeconds && (type.equals("datetime") || type.equals("time"))) {
+            String flds[] = value.split("\\.", 2);
+            
+            return new JSONValue(flds[0]);
+        } 
+        else
+            return new JSONValue(value.trim());
+    }
     public void append(StringBuilder buffer, JSONFormat format) {
         switch (getType()) {
             case Object:

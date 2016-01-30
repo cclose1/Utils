@@ -193,11 +193,6 @@ public class JSONObject implements Iterable<JSONNameValue>{
     public String toString() {
         return toString(new JSONFormat());
     }
-    private class Column {
-        String type;
-        int    precision;
-        int    scale;
-    }
     public void add(String name, ResultSet rs, String optionalColumns, boolean fractionalSeconds) throws SQLException, JSONException {
         class Field {
             boolean present = false;
@@ -207,8 +202,7 @@ public class JSONObject implements Iterable<JSONNameValue>{
         if (optionalColumns != null) {
             for (String f : optionalColumns.split(",")) fields.put(f, new Field());
         }        
-        JSONArray         row;
-        ArrayList<Column> columns = new ArrayList<Column>();
+        JSONArray row;
         
         int count = rs.getMetaData().getColumnCount();
         
@@ -217,17 +211,12 @@ public class JSONObject implements Iterable<JSONNameValue>{
 
         for (int i = 1; i <= count; i++) {
             JSONObject col;
-            Column     hdr      = new Column();
             String     field    = rs.getMetaData().getColumnLabel(i);
             Field      optional = fields.get(field);
             
-            columns.add(hdr);
-            col           = row.addObject();
-            hdr.type      = rs.getMetaData().getColumnTypeName(i);
-            hdr.precision = rs.getMetaData().getPrecision(i);
-            hdr.scale     = rs.getMetaData().getScale(i);
+            col = row.addObject();
             col.add("Name", new JSONValue(field));
-            col.add("Type", new JSONValue(hdr.type));
+            col.add("Type", new JSONValue(rs.getMetaData().getColumnTypeName(i).toLowerCase()));
             
             if (optional != null) {
                 optional.present = true;
@@ -239,24 +228,8 @@ public class JSONObject implements Iterable<JSONNameValue>{
         while (rs.next()) {
             JSONArray col = row.addArray();
             
-            for (int i = 1; i <= count; i++) {
-                String value = rs.getString(i);   
-                Column hdr   = columns.get(i - 1);                
-                String type  = hdr.type.toLowerCase();
-                
-                if (value == null)
-                    col.add(new JSONValue(value));
-                else if (type.equals("int"))                    
-                    col.add(new JSONValue(rs.getInt(i)));
-                else if (type.equals("decimal"))                    
-                    col.add(new JSONValue(rs.getDouble(i), hdr.scale));
-                else if (!fractionalSeconds && (type.equals("datetime") || type.equals("time"))) {
-                    String flds[] = value.split("\\.", 2);
-                    
-                    col.add(new JSONValue(flds[0]));
-                } 
-                else
-                    col.add(new JSONValue(value.trim()));
+            for (int i = 1; i <= count; i++) {                
+                col.add(JSONValue.getJSONValue(rs, i, fractionalSeconds));
             }
         }
     }

@@ -159,7 +159,7 @@ public class JSONArray implements Iterable<JSONValue> {
      * </ul>
      * @param rs Result set containing fields.
      */
-    public void addFields(ResultSet rs, String optionalColumns) throws SQLException, JSONException {
+    public void addFields(ResultSet rs, String optionalColumns, boolean fractionalSeconds) throws SQLException, JSONException {
         class Field {
             boolean present = false;
         }
@@ -173,15 +173,15 @@ public class JSONArray implements Iterable<JSONValue> {
 
             for (int i = 1; i <= count; i++) {
                 JSONObject field    = addObject();
-                String     name     = rs.getMetaData().getColumnName(i);
-                String     type     = rs.getMetaData().getColumnTypeName(i);
+                String     name     = rs.getMetaData().getColumnLabel(i);
+                String     type     = rs.getMetaData().getColumnTypeName(i).toLowerCase();
                 Field      optional = fields.get(name);
 
                 field.add("Name",      new JSONValue(name));
                 field.add("Type",      new JSONValue(type));
                 field.add("Precision", new JSONValue(rs.getMetaData().getPrecision(i)));
                 field.add("Scale",     new JSONValue(type.contains("money") ? 2 : rs.getMetaData().getScale(i)));
-                field.add("Value",     new JSONValue(rs.getString(i), false, false));
+                field.add("Value",     JSONValue.getJSONValue(rs, i, fractionalSeconds));
                 
                 if (optional != null) {
                     optional.present = true;
@@ -209,7 +209,7 @@ public class JSONArray implements Iterable<JSONValue> {
      * @param rs Result set containing fields.
      */
     public void addFields(ResultSet rs) throws SQLException, JSONException {
-        addFields(rs, null);
+        addFields(rs, null, false);
     }
     /**
      * Appends the array as a string to buffer.
