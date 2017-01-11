@@ -14,6 +14,10 @@ public class SQLDeleteBuilder extends SQLBuilder {
     public SQLDeleteBuilder(String table) {
         this.table = table;
     }
+    public SQLDeleteBuilder(String table, String protocol) {
+        this.table    = table;
+        this.protocol = protocol;
+    }
     public String build() {
         StringBuilder sql = new StringBuilder("DELETE FROM " + table + " ");
         addWhere(sql);

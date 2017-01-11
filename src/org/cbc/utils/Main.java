@@ -1,5 +1,7 @@
 package org.cbc.utils;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -12,6 +14,7 @@ import org.cbc.application.reporting.Report;
 import org.cbc.json.JSONArray;
 import org.cbc.json.JSONException;
 import org.cbc.json.JSONObject;
+import org.cbc.json.JSONReader;
 import org.cbc.json.JSONValue;
 import org.cbc.sql.SQLSelectBuilder;
 import org.cbc.utils.data.DatabaseSession;
@@ -26,8 +29,20 @@ import org.cbc.utils.system.DateFormatter;
  * @author Chris
  */
 public class Main {
+    private static void readFile(String file) throws FileNotFoundException, JSONException {
+        JSONReader r = new JSONReader(new File(file));
+        JSONValue  v;
+        JSONReader.Token t;
+        
+        while ((t = r.next()) != null) {
+            System.out.println(t.toString());
+        }
+        v = JSONValue.load(new File(file));
+        System.out.println(v.toString());
+    }
     public static void testJSON() {
         try {
+            readFile("C:\\MyFiles\\My Documents\\AgeConcern\\LoadCRM.txt");
             JSONObject json = new JSONObject();
             JSONObject obj1;
             JSONArray arr1;
@@ -53,8 +68,11 @@ public class Main {
             System.out.println(json.toString());
         } catch (JSONException e) {
             System.out.println(e.getMessage());
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }        
-    }public static void testSQLBuilder() throws ParseException {
+    }
+    public static void testSQLBuilder() throws ParseException {
         DatabaseSession  db  = new DatabaseSession();
         SQLSelectBuilder sql = new SQLSelectBuilder();
         Date test = (new SimpleDateFormat("H:m:s")).parse("12:34:56");
@@ -116,11 +134,13 @@ public class Main {
         testDate("2014-08-02");
         testDate("01-08-2002");
         testDate("2001-08-2002");
+        testJSON();
+        /*
         try {
-            //testJSON();
             testSQLBuilder();
         } catch (ParseException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
+        */
     }
 }

@@ -22,8 +22,8 @@ import org.cbc.json.JSONValue;
  */
 public class Main {
 
-    private static void testLoad(JSONReader reader, boolean strictQuotes) throws JSONException {
-        JSONValue  value  = JSONValue.load(reader, strictQuotes);
+    private static void testLoad(JSONReader reader, boolean strictQuotes, boolean ordered) throws JSONException {
+        JSONValue  value  = JSONValue.load(reader, strictQuotes, ordered);
         JSONObject object = value.getObject();
         
         object.add("float1",  new JSONValue((float)1.2378, 2));
@@ -39,7 +39,7 @@ public class Main {
             else
                 tr = new JSONReader("{\"a\" :[1,2, 3,\"b\"],\"b\":23}");
             
-            testLoad(tr, true);
+            testLoad(tr, true, true);
             
             JSONReader.Token t;
             

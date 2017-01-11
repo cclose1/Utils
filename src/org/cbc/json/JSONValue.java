@@ -4,6 +4,8 @@
  */
 package org.cbc.json;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.sql.ResultSet;
@@ -299,7 +301,7 @@ public class JSONValue {
         
         return array;
     }
-    private static JSONArray loadArray(JSONReader stream, boolean strictQuotes) throws JSONException {
+    private static JSONArray loadArray(JSONReader stream, boolean strictQuotes, boolean ordered) throws JSONException {
         JSONReader.Token t;
         JSONArray        a       = new JSONArray();
         int              index   = 0;
@@ -321,11 +323,11 @@ public class JSONValue {
                     a.add(new JSONValue(t.getValue(), t.isQuoted(), strictQuotes));
                     break;
                 case '[':
-                    a.add(loadArray(stream, strictQuotes));
+                    a.add(loadArray(stream, strictQuotes, ordered));
                     noValue = true;
                     break;
                 case '{':
-                    a.add(loadObject(stream, strictQuotes));
+                    a.add(loadObject(stream, strictQuotes, ordered));
                     noValue = true;
                     break;
                 default:
@@ -337,9 +339,9 @@ public class JSONValue {
         }
         return a;
     }
-    private static JSONObject loadObject(JSONReader stream, boolean strictQuotes) throws JSONException {
+    private static JSONObject loadObject(JSONReader stream, boolean strictQuotes, boolean ordered) throws JSONException {
         JSONReader.Token t;
-        JSONObject       o = new JSONObject();
+        JSONObject       o = new JSONObject(ordered);
         
         while ((t = stream.next(":},")) != null) {
             String name = t.getValue();
@@ -356,10 +358,10 @@ public class JSONValue {
                     o.add(name, new JSONValue(t.getValue(), t.isQuoted(), strictQuotes));
                     break;
                 case '[':
-                    o.add(name, loadArray(stream, strictQuotes));
+                    o.add(name, loadArray(stream, strictQuotes, ordered));
                     break;
                 case '{':
-                    o.add(name, loadObject(stream, strictQuotes));
+                    o.add(name, loadObject(stream, strictQuotes, ordered));
                     break;
                 default:
                     throw new JSONException("Object field " + name + " invalid token " + t.toString());
@@ -378,13 +380,13 @@ public class JSONValue {
      * 
      * @throws JSONException if the data is not a valid JSONValue
      */
-    public static JSONValue load(JSONReader stream, boolean strictQuotes) throws JSONException {
+    public static JSONValue load(JSONReader stream, boolean strictQuotes, boolean ordered) throws JSONException {
         JSONReader.Token t    = stream.next("{[");
         
         if (t.getSeparator() == '{')
-            return new JSONValue(loadObject(stream, strictQuotes));
+            return new JSONValue(loadObject(stream, strictQuotes, ordered));
         
-        return new JSONValue(loadArray(stream, strictQuotes));
+        return new JSONValue(loadArray(stream, strictQuotes, ordered));
     }
     /**
      * As above but with strictQuotes set to true.
@@ -394,7 +396,7 @@ public class JSONValue {
      * @throws JSONException
      */
     public static JSONValue load(JSONReader stream) throws JSONException {
-        return load(stream, true);
+        return load(stream, true, true);
     }
     /**
      *
@@ -403,8 +405,8 @@ public class JSONValue {
      * @return
      * @throws JSONException
      */
-    public static JSONValue load(StringReader stream, boolean strictQuotes) throws JSONException {
-        return load(new JSONReader(stream), strictQuotes);
+    public static JSONValue load(StringReader stream, boolean strictQuotes, boolean ordered) throws JSONException {
+        return load(new JSONReader(stream), strictQuotes, ordered);
     }
     /**
      *
@@ -413,7 +415,7 @@ public class JSONValue {
      * @throws JSONException
      */
     public static JSONValue load(StringReader stream) throws JSONException {
-        return load(stream, true);
+        return load(stream, true, true);
     }
     /**
      *
@@ -422,8 +424,8 @@ public class JSONValue {
      * @return
      * @throws JSONException
      */
-    public static JSONValue load(InputStream stream, boolean strictQuotes) throws JSONException {
-        return load(new JSONReader(stream), strictQuotes);
+    public static JSONValue load(InputStream stream, boolean strictQuotes, boolean ordered) throws JSONException {
+        return load(new JSONReader(stream), strictQuotes, ordered);
     }
     /**
      *
@@ -432,7 +434,26 @@ public class JSONValue {
      * @throws JSONException
      */
     public static JSONValue load(InputStream stream) throws JSONException {
-        return load(stream, true);
+        return load(stream, true, true);
+    }
+    /**
+     *
+     * @param stream
+     * @param strictQuotes
+     * @return
+     * @throws JSONException
+     */
+    public static JSONValue load(File stream, boolean strictQuotes, boolean ordered) throws JSONException, FileNotFoundException {
+        return load(new JSONReader(stream), strictQuotes, ordered);
+    }
+    /**
+     *
+     * @param stream
+     * @return
+     * @throws JSONException
+     */
+    public static JSONValue load(File stream) throws JSONException, FileNotFoundException {
+        return load(stream, true, true);
     }
     /**
      * Returns the value string formatted according format. 

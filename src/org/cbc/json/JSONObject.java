@@ -101,6 +101,8 @@ public class JSONObject implements Iterable<JSONNameValue>{
         if (members.containsKey(name)) throw new JSONException("Member " + name + " already exists");
        
         members.put(name, value);
+        
+        if (order != null) order.add(name);
     }
     public void update(String name, JSONValue value) throws JSONException {
         if (!members.containsKey(name)) throw new JSONException("Member " + name + " does not exists");

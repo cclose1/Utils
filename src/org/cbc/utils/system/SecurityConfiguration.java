@@ -14,5 +14,6 @@ public interface SecurityConfiguration {
     boolean getLogRequest();
     boolean getLogReply();
     boolean getLoginRequired();
+    boolean getSSHRequired();
     String  getHashAlgorithm();
 }

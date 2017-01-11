@@ -19,6 +19,10 @@ public class SQLSelectBuilder extends SQLBuilder {
     public SQLSelectBuilder(String table) {
         this.table = table;
     }
+    public SQLSelectBuilder(String table, String protocol) {
+        this.table    = table;
+        this.protocol = protocol;
+    }
     public SQLSelectBuilder() {
     }
     public void setOptions(String options) {

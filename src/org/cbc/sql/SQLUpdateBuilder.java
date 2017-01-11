@@ -14,6 +14,10 @@ public class SQLUpdateBuilder extends SQLBuilder {
     public SQLUpdateBuilder(String table) {
         this.table = table;
     }
+    public SQLUpdateBuilder(String table, String protocol) {
+        this.table    = table;
+        this.protocol = protocol;
+    }
     public void addIncrementField(String name, int increment) {
         addField(name, name + (increment < 0? '-' : '+') + increment, "", false);
     }

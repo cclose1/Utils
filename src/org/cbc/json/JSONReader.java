@@ -4,6 +4,9 @@
  */
 package org.cbc.json;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -96,6 +99,9 @@ public class JSONReader {
     }
     public JSONReader(InputStream jsonData) {
         is = jsonData;
+    }
+    public JSONReader(File jsonData) throws FileNotFoundException {
+        is = new FileInputStream(jsonData);
     }
     public Token next(String allowed) throws JSONException {
         Token   t        = null;

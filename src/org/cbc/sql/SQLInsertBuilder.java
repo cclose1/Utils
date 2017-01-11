@@ -16,6 +16,10 @@ public class SQLInsertBuilder extends SQLBuilder {
     public SQLInsertBuilder(String table) {
         this.table = table;
     }
+    public SQLInsertBuilder(String table, String protocol) {
+        this.table    = table;
+        this.protocol = protocol;
+    }
     public String build() {
         StringBuilder sql    = new StringBuilder("INSERT " + table + "(\r\n   ");
         StringBuilder values = new StringBuilder(") VALUES (\r\n");

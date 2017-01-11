@@ -76,6 +76,9 @@ public abstract class SQLBuilder {
     public String getProtocol() {
         return protocol;
     }
+    private String delimitName(String name) {
+        return DatabaseSession.delimitName(name, protocol);
+    }
     protected void addField(String name, String value, String alias, boolean quoted) {
         fields.add(new Field(name, value, alias, quoted));
     }
@@ -120,6 +123,14 @@ public abstract class SQLBuilder {
         } else
             where.append(value);
     }
+    public String getTimestamp(Date date) {
+        if (date == null) date = new Date();
+        
+        return fmtTimestamp.format(date);
+    }
+    public String getWhere() {
+        return where.toString();
+    }
     public void addAnd(String field, String operator, String value) {
         if (value != null && value.trim().length()!= 0) addAnd(field, operator, value, true);
     }
@@ -137,6 +148,14 @@ public abstract class SQLBuilder {
     }
     public void addField(String name, int value) {
         addField(name, value, null);
+    }
+    public void addAndStart(Date start) {
+        if (start != null) {
+            addAnd("Start", "<=", start);
+            setWhere(
+                " AND (" + delimitName("End") + " >= '" + getTimestamp(start) +
+                "' OR "  + delimitName("End") + " IS NULL)");
+        }
     }
     public void clearFields() {
         fields.clear();
