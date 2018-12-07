@@ -234,13 +234,13 @@ public class JSONValue {
         else
             return new JSONValue(value.trim());
     }
-    public void append(StringBuilder buffer, JSONFormat format) {
+    public void append(StringBuilder buffer, JSONFormat format, String nullOverride) {
         switch (getType()) {
             case Object:
-                object.append(buffer, format);
+                object.append(buffer, format, nullOverride);
                 break;
             case Array:
-                array.append(buffer, format);
+                array.append(buffer, format, nullOverride);
                 break;
             case String:
                 buffer.append('"');
@@ -254,13 +254,15 @@ public class JSONValue {
                 buffer.append(value);
                 break;
             case Null:
-                buffer.append(value);
+                buffer.append(nullOverride != null? '"' + nullOverride + '"' : value);
                 break;
             default:
                 throw new AssertionError(getType().name());
         }
+    }    
+    public void append(StringBuilder buffer, JSONFormat format) {
+        append(buffer, format, null);
     }
-
     /**
      * Returns the values type.
      * 

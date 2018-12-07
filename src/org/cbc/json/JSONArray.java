@@ -126,7 +126,7 @@ public class JSONArray implements Iterable<JSONValue> {
      * @param buffer Target for the formatted string.
      * @param format Format applied to the array string.
      */
-    public void append(StringBuilder buffer, JSONFormat format) {
+    public void append(StringBuilder buffer, JSONFormat format, String nullOverride) {
         boolean first = true;
         
         buffer.append('[');
@@ -136,11 +136,14 @@ public class JSONArray implements Iterable<JSONValue> {
             if (!first) buffer.append(',');
             
             format.startLine(buffer);
-            v.append(buffer, format);
+            v.append(buffer, format, nullOverride);
             first = false;
         }
         buffer.append(']');
         format.exit();
+    }
+    public void append(StringBuilder buffer, JSONFormat format) {
+        append(buffer, format, null);
     }
     /**
      * Add the fields as an array of objects. The result set must either be empty or

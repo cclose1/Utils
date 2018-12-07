@@ -30,11 +30,15 @@ public abstract class SQLBuilder {
     private ArrayList<String>               uses         = new ArrayList<>(0);
     private SimpleDateFormat                fmtTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
+    public String delimitName(String name) {
+        return name == null? null : DatabaseSession.delimitName(name, protocol);
+    }
     protected class Field {
         private String  name;
         private String  value;
         private String  alias;
         private boolean quoted;
+        private String  cast;
 
         public Field(String name, String value, String alias, boolean quoted) {
             this.name   = name;
@@ -48,18 +52,21 @@ public abstract class SQLBuilder {
             this.alias = alias;
             quoted     = false;
         }
-        public String getName() {
-            if (name == null) return null;
-            
-            return DatabaseSession.delimitName(name, protocol);
+        public String getName() {            
+            return delimitName(name);
         }
         public String getValue() {
-            return value == null? "null" : isQuoted()? '\'' + DatabaseSession.escape(value) + '\'' : value;
+            return value == null? null : isQuoted()? '\'' + DatabaseSession.escape(value) + '\'' : value;
         }
-        public String getAlias() {
-            return alias;
+        public String getAlias() {            
+            return delimitName(cast != null && alias ==null? name : alias);
         }
-
+        public String getCast() {
+            return cast;
+        }
+        public void setCast(String cast) {
+            this.cast = cast;
+        }
         /**
          * @return the quoted
          */
@@ -76,22 +83,26 @@ public abstract class SQLBuilder {
     public String getProtocol() {
         return protocol;
     }
-    private String delimitName(String name) {
-        return DatabaseSession.delimitName(name, protocol);
+    protected Field addField(String name, String value, String alias, boolean quoted) {
+        Field f = new Field(name, value, alias, quoted);
+        fields.add(f);
+        return f;
     }
-    protected void addField(String name, String value, String alias, boolean quoted) {
-        fields.add(new Field(name, value, alias, quoted));
+    protected Field addField(String name, String value, String alias) {
+        return addField(name, value, alias, true);
     }
-    protected void addField(String name, String value, String alias) {
-        fields.add(new Field(name, value, alias, true));
+    protected Field addField(String name, int value, String alias) {
+        Field f = new Field(name, value, alias);
+        fields.add(f);
+        return f;
     }
-    protected void addField(String name, int value, String alias) {
-        fields.add(new Field(name, value, alias));
+    protected Field getField(String name) {
+        return fields.get(fields.indexOf(name));
     }
     protected void addClause(StringBuilder sql, String name, String value) {
         if (value != null) {
             sql.append("\r\n");
-            sql.append(name);
+            sql.append(delimitName(name));
             sql.append(' ');
             sql.append(value);            
         }

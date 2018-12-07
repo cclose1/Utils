@@ -73,12 +73,13 @@ public class Main {
         }        
     }
     public static void testSQLBuilder() throws ParseException {
-        DatabaseSession  db  = new DatabaseSession();
+        DatabaseSession  db  = new DatabaseSession("sqlserver", "127.0.0.1", "Expenditure");
         SQLSelectBuilder sql = new SQLSelectBuilder();
         Date test = (new SimpleDateFormat("H:m:s")).parse("12:34:56");
 
         try {
-            db.open("127.0.0.1", "Expenditure", "Test1", "Test1");
+            db.setUser("Test1", "Test1");
+            db.connect();
             sql.addField("SeqNo");
             sql.addField("SessionId");
             sql.addField("UserId");

@@ -150,7 +150,7 @@ public class JSONObject implements Iterable<JSONNameValue>{
      * @param buffer Target for the formatted string.
      * @param format Format applied to the object string.
      */
-    public void append(StringBuilder buffer, JSONFormat format) {
+    public void append(StringBuilder buffer, JSONFormat format, String nullOverride) {
         boolean first = true;
         
         buffer.append('{');
@@ -163,19 +163,24 @@ public class JSONObject implements Iterable<JSONNameValue>{
             buffer.append('"');
             buffer.append(nv.getName());
             buffer.append("\":");
-            nv.getValue().append(buffer, format);
+            nv.getValue().append(buffer, format, nullOverride);
             first = false;
         }
         buffer.append('}');
         format.exit();
     }
-
+    public void append(StringBuilder buffer, JSONFormat format) {
+        append(buffer, format, null);
+    }
     /**
      * Appends the object as a string to buffer.
      * @param buffer Target for the string.
      */
     public void append(StringBuilder buffer) {
-        append(buffer, new JSONFormat());
+        append(buffer, new JSONFormat(), null);
+    }
+    public void append(StringBuilder buffer, String nullOverride) {
+        append(buffer, new JSONFormat(), nullOverride);
     }
 
     /**
@@ -183,17 +188,20 @@ public class JSONObject implements Iterable<JSONNameValue>{
      * @param format Applied to the object string.
      * @return Formatted object string.
      */
-    public String toString(JSONFormat format) {
+    public String toString(JSONFormat format, String nullOverride) {
         StringBuilder buffer = new StringBuilder();
-        append(buffer, format);
+        append(buffer, format, nullOverride);
         return buffer.toString();
+    }
+    public String toString(JSONFormat format) {
+        return toString(format, null);
     }
     /**
      * Returns the object string.
      * @return Object string.
      */
     public String toString() {
-        return toString(new JSONFormat());
+        return toString(new JSONFormat(), null);
     }
     public void add(String name, ResultSet rs, String optionalColumns, boolean fractionalSeconds) throws SQLException, JSONException {
         class Field {

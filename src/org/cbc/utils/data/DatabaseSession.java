@@ -23,7 +23,6 @@ import org.cbc.application.reporting.Report;
  * @author CClose
  */
 public class DatabaseSession {
-
     private static String pad(ResultSet rs, int max, int column, String value) throws SQLException {
         int size = rs.getMetaData().getColumnDisplaySize(column);
         
@@ -146,29 +145,112 @@ public class DatabaseSession {
             return typeName;
         }
     }
-    private Connection connection          = null;
-    private String     server              = null;
-    private String     database            = null;
-    private String     user                = null;
-    private String     password            = null;
-    private String     version             = null;
-    private boolean    reportException     = true;
-    private boolean    querying            = false;
-    private Logger     log                 = new Logger();
-    private String     protocol            = null;
-    private int        updateResultSetType = ResultSet.TYPE_FORWARD_ONLY;
-    private int        statementTimeout    = 0;
-    private int        defaultIsolation    = 0;
+    private Connection   connection          = null;
+    private String       server              = null;
+    private String       database            = null;
+    private String       user                = null;
+    private String       password            = null;
+    private String       version             = null;
+    private boolean      reportException     = true;
+    private boolean      querying            = false;
+    private Logger       log                 = new Logger();
+    private String       protocol            = null;
+    private int          updateResultSetType = ResultSet.TYPE_FORWARD_ONLY;
+    private int          statementTimeout    = 0;
+    private int          defaultIsolation    = 0;
+    private char         propertyDelim       = ';';
+    private char         nextDelim           = ';';
+    private StringBuffer connectString;
 
     public static String delimitName(String name, String protocol) {
+        String flds[] = name.split("\\.");
+        String prefix = null;
+        
+        if (flds.length == 2) {
+            /*
+             * name is of the form A.B. Only need delimit the B part.
+             */
+            prefix = flds[0];
+            name   = flds[1];
+        }
         if (protocol.equalsIgnoreCase("sqlserver")) {
             if (name.equalsIgnoreCase("transaction") ||
                 name.equalsIgnoreCase("database")    ||
                 name.equalsIgnoreCase("index")       ||
                 name.equalsIgnoreCase("sent")        ||
-                name.equalsIgnoreCase("end")) return '[' + name + ']';
+                name.equalsIgnoreCase("end")) name = '[' + name + ']';
+        } else if (protocol.equalsIgnoreCase("mysql")) {
+            if (name.equalsIgnoreCase("usage")) name = '`' + name + '`';            
         }
-        return name;
+        return prefix != null? prefix + '.' + name : name;
+    }
+    public void addConnectionProperty(String name, String value) {
+        connectString.append(propertyDelim);
+        connectString.append(name);    
+        connectString.append('=');
+        connectString.append(value);        
+        propertyDelim = nextDelim;
+    }    
+    public String getConnectionString() {
+        return connectString.toString();
+    }
+        
+    private void startConnectionString(String protocol, String server, String database) {
+        this.protocol = protocol;
+        this.server   = server;
+        this.database = database;
+        
+        try {
+            if (protocol.equals("sqlserver")) {
+                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+                connectString = new StringBuffer("jdbc:sqlserver://" + server + ":1433");
+                addConnectionProperty("databaseName", database);
+            } else if(protocol.equals("jdbc:odbc")) {
+                Class.forName("sun.jdbc.odbc.JdbcOdbcDriver");
+                updateResultSetType = ResultSet.TYPE_SCROLL_INSENSITIVE;
+                connectString       = new StringBuffer("jdbc:odbc:Driver=" + server + ";" + database);
+            } else if(protocol.equals("mysql")) {
+                Class.forName("com.mysql.jdbc.Driver");
+                connectString = new StringBuffer("jdbc:" + protocol + "://" + server + "/" + database);
+                propertyDelim = '?';
+                nextDelim     = '&';
+            } else if(protocol.equals("postgresql")) {
+                Class.forName("org.postgresql.Driver");
+                connectString = new StringBuffer("jdbc:" + protocol + "://" + server + "/" + database);
+            } else
+                log.fatalError("JDBC protocol " + protocol + " not supported");
+        } catch (ClassNotFoundException ex) {
+            log.comment("Probably missing the jdbc jar file on the classpath for protocol " + protocol);
+            log.fatalError(ex);
+        }
+    }
+    public DatabaseSession() {
+        
+    }
+    public DatabaseSession(String protocol, String server, String database) {
+        startConnectionString(protocol, server, database);
+    }
+    public void setUser(String user, String password) {
+        if (user != null && user.trim().length() != 0)
+            addConnectionProperty("user", user);
+        else if (protocol.equals("sqlserver"))
+            addConnectionProperty("integratedSecurity", "true");
+        if (user != null && user.trim().length() != 0)
+            addConnectionProperty("password", password);       
+    }
+    public void connect() throws SQLException {
+        connection       = DriverManager.getConnection(connectString.toString());
+        defaultIsolation = connection.getTransactionIsolation();
+        version          = connection.getMetaData().getDriverVersion();
+        /*
+         * For PostgreSQL change string handling to standard.
+         */
+        if (protocol.equals("postgresql")) executeUpdate("set standard_conforming_strings=on");
+    }
+    public void connect(String protocol, String server, String database, String user, String password) throws SQLException{
+        startConnectionString(protocol, server, database);
+        setUser(user, password);
+        connect();
     }
     public String delimitName(String name) {
         return delimitName(name, protocol);
@@ -178,92 +260,12 @@ public class DatabaseSession {
             log.fatalError(exception);
         }
     }
-    private void addConnectParameter(StringBuffer connect, char delimiter, String name, String value) {
-        if (value.length() != 0) {
-            connect.append(delimiter);
-            connect.append(name);
-            connect.append('=');
-            connect.append(value);
-        }
-    }
-    private Connection createConnection(String server, String database, String user, String password) throws SQLException {
-        Connection conn = null;
-        
-        this.server   = server;
-        this.database = database;
-        this.user     = user;
-        this.password = password;
-        this.protocol = "sqlserver";
-    
-        try {
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            StringBuffer params = new StringBuffer("jdbc:sqlserver://" + server);
-            
-            addConnectParameter(params, ';', "databaseName", database);
-
-            if (user == null || user.length() == 0) {
-                addConnectParameter(params, ';',  "integratedSecurity", "true");
-            } else {
-                addConnectParameter(params, ';',  "user", user);
-                
-                if (password != null) addConnectParameter(params, ';', "password", password);
-            }
-            conn = DriverManager.getConnection(params.toString());
-            version = conn.getMetaData().getDriverVersion();
-            return conn;
-        } catch (ClassNotFoundException ex) {
-            log.comment("Probably missing the jdbc jar file on the classpath");
-            log.fatalError(ex);
-        }
-        return null;
-    }
     public boolean requiresStrongType() {
         return !protocol.equalsIgnoreCase("sqlserver");
-    }
-    public void open(String server, String database, String user, String password) throws SQLException {
-        connection       = createConnection(server, database, user, password);  
-        defaultIsolation = connection.getTransactionIsolation();    
-    }
-    public void open(String server, String database) throws SQLException  {
-        connection = createConnection(server, database, "", "");
-    }
-    public void open(
-            String protocol,
-            String driverClass,
-            String server,
-            String database,
-            String user,
-            String password) throws SQLException {
-        this.protocol = protocol;
-        try {
-            if (protocol.equalsIgnoreCase("sqlserver")) {
-                open(server, database, user, password);
-            } else if (protocol.equalsIgnoreCase("jdbc:odbc")) {
-                Class.forName("sun.jdbc.odbc.JdbcOdbcDriver");
-                updateResultSetType = ResultSet.TYPE_SCROLL_INSENSITIVE;
-                connection          = DriverManager.getConnection("jdbc:odbc:Driver=" + server + ";" + database);
-                defaultIsolation    = connection.getTransactionIsolation();
-            } else {
-                Class.forName(driverClass);
-                StringBuffer params = new StringBuffer("jdbc:" + this.getProtocol() + "://" + server + "/" + database);
-
-                addConnectParameter(params, '?', "user", user);
-                addConnectParameter(params, '&', "password", password);
-                connection       = DriverManager.getConnection(params.toString());
-                defaultIsolation = connection.getTransactionIsolation();
-                /*
-                 * For PostgreSQL change string handling to stamdard.
-                 */
-                if (this.getProtocol().equals("postgresql")) executeUpdate("set standard_conforming_strings=on");
-            }
-        } catch (ClassNotFoundException ex) {
-            throw new SQLException("For protocol " + protocol + " class " + driverClass + " not found");
-        }
     }
     public void open(Properties properties) throws SQLException {
         Enumeration<?> e          = properties.propertyNames();
         String         protName   = "sqlserver";
-        String         protDriver = null;
         String         dbServer   = null;
         String         dbName     = null;
         String         dbUser     = null;
@@ -274,8 +276,6 @@ public class DatabaseSession {
 
             if (key.equalsIgnoreCase("Protocol")) {
                 protName = properties.getProperty(key);
-            } else if (key.equalsIgnoreCase("Driver")) {
-                protDriver = properties.getProperty(key);
             } else if (key.equalsIgnoreCase("Server")) {
                 dbServer = properties.getProperty(key);
             } else if (key.equalsIgnoreCase("Database")) {
@@ -288,7 +288,7 @@ public class DatabaseSession {
                 log.fatalError("Opening connection property " + key + " not supported");
             }
         }
-        open(protName, protDriver, dbServer, dbName, dbUser, dbPassword);
+        connect(protName, dbServer, dbName, dbUser, dbPassword);
     }
     public void startTransaction() throws SQLException {
         connection.setAutoCommit(false);
@@ -422,7 +422,7 @@ public class DatabaseSession {
                 try {
                     reportException = false;
                     connection.close();
-                    connection = createConnection(this.getServer(), this.getDatabase(), this.user, this.password);
+                    connect(this.getProtocol(), this.getServer(), this.getDatabase(), this.user, this.password);
                 } catch (SQLException ex) {
                     logException(ex);
                 }

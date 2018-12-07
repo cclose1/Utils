@@ -37,23 +37,29 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void addField(String name, String alias) {
         addField(name, null, alias);
     }
+    public void addField(String name, String alias, String value, String cast) {
+        addField(name, value, alias).setCast(cast);
+    }
+    public void addField(String name, String alias, int value, String cast) {
+        addField(name, value, alias).setCast(cast);
+    }
     public void addDefaultedField(String name, String nullDefault) {
-        addField(null, "COALESCE(" + name + ", '" + nullDefault + "')", name, false);
+        addField(name, name, nullDefault, null);
     }
     public void addDefaultedField(String name, String alias, String nullDefault) {
-        addField(null, "COALESCE(" + name + ", '" + nullDefault + "')", alias, false);
+        addField(name, alias, nullDefault, null);
     }
     public void addDefaultedField(String name, int nullDefault) {
-        addField(null, "COALESCE(" + name + ", " + nullDefault + ")", name, false);
+        addField(name, null, nullDefault, null);
     }
     public void addDefaultedField(String name, String alias, int nullDefault) {
-        addField(null, "COALESCE(" + name + ", " + nullDefault + ")", alias, false);
+        addField(name, alias, nullDefault, null);
     }
     public void addDefaultedField(String name, String alias, int nullDefault, int precision) {
         if (precision == 0)
-            addField(null, "CAST(COALESCE(" + name + ", " + nullDefault + ") AS " + (protocol.equalsIgnoreCase("mysql")? "SIGNED" : "INT") + ")", alias, false);
+            addField(null, "CAST(COALESCE(" + delimitName(name) + ", " + nullDefault + ") AS " + (protocol.equalsIgnoreCase("mysql")? "SIGNED" : "INT") + ")", alias, false);
         else
-            addField(null, "CAST(COALESCE(" + name + ", " + nullDefault + ") AS DECIMAL(12," + precision + "))", alias, false);
+            addField(null, "CAST(COALESCE(" + delimitName(name) + ", " + nullDefault + ") AS DECIMAL(12," + precision + "))", alias, false);
     }
     public void addDefaultedField(String name, int nullDefault, int precision) {
         addDefaultedField(name, name, nullDefault, precision);
@@ -84,9 +90,18 @@ public class SQLSelectBuilder extends SQLBuilder {
             sql.append("* ");
         } else {
             for (Field f : fields) {
+                
+                String id = f.getName();
+                
+                if (id == null) 
+                    id = f.getValue();
+                else if (f.getValue() != null) 
+                    id = "COALESCE(" +  id + ", " + f.getValue() + ")";
+                
+                id = f.getCast() != null? "CAST(" + id + " AS " + f.getCast() + ")" : id;
                 sql.append(sep);
                 sql.append("\r\n    ");
-                sql.append(f.getName() == null? f.getValue() : f.getName());
+                sql.append(id);
                 sep = ',';
             
                 if (f.getAlias() != null) {
