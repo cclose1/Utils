@@ -61,6 +61,7 @@ public class JSONReader {
         public int getStart() {
             return start;
         }
+        @Override
         public String toString() {
             return "Start " + start + " separator " + separator + " value " + value;
         }
@@ -102,6 +103,24 @@ public class JSONReader {
     }
     public JSONReader(File jsonData) throws FileNotFoundException {
         is = new FileInputStream(jsonData);
+    }
+    public JSONReader(Object jsonData) throws FileNotFoundException, Exception {
+        switch (jsonData.getClass().getSimpleName()) {
+            case "File":
+                is = new FileInputStream((File)jsonData);
+                break;
+            case "InputStream":
+                is = (InputStream) jsonData;
+                break;
+            case "StringReader":
+                sr = (StringReader) jsonData;
+                break;
+            case "String":
+                sr = new StringReader((String)jsonData);
+                break;
+            default:
+                throw new Exception("Class " + jsonData.getClass().getName() + " not a supported JSON data source");
+        }
     }
     public Token next(String allowed) throws JSONException {
         Token   t        = null;

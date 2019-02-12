@@ -19,6 +19,27 @@ public class Timer {
     private long     startTime = System.nanoTime();
     private boolean  autoReset = true;
 
+    public enum TimeUnit {MILLISECONDS, SECONDS, MINUTES};
+            
+    public static void delay(int duration, TimeUnit units) {
+        int ms = 0;
+        
+        switch(units) {
+            case MILLISECONDS:
+                ms = duration;
+                break;
+            case SECONDS:
+                ms = 1000 * duration;
+                break;
+            case MINUTES:
+                ms = 60000 * duration;
+        }
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
+    }
     public Timer() {
         setFractionalDigits(3);
     }

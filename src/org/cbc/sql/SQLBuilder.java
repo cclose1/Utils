@@ -52,6 +52,12 @@ public abstract class SQLBuilder {
             this.alias = alias;
             quoted     = false;
         }
+        public Field(String name, double value, String alias) {
+            this.name  = name;
+            this.value = "" + value;
+            this.alias = alias;
+            quoted     = false;
+        }
         public String getName() {            
             return delimitName(name);
         }
@@ -92,6 +98,11 @@ public abstract class SQLBuilder {
         return addField(name, value, alias, true);
     }
     protected Field addField(String name, int value, String alias) {
+        Field f = new Field(name, value, alias);
+        fields.add(f);
+        return f;
+    }
+    protected Field addField(String name, double value, String alias) {
         Field f = new Field(name, value, alias);
         fields.add(f);
         return f;
@@ -158,6 +169,9 @@ public abstract class SQLBuilder {
         addField(name, fmtTimestamp.format(value), null);
     }
     public void addField(String name, int value) {
+        addField(name, value, null);
+    }
+    public void addField(String name, double value) {
         addField(name, value, null);
     }
     public void addAndStart(Date start) {

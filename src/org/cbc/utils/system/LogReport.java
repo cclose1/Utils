@@ -15,7 +15,7 @@ public interface LogReport {
     public void error(String message);
     public void fatalError(String message);
     public void fatalError(Exception exception);
-    public void fatalError(String className, Exception exception);
+    public void fatalError(String message, Exception exception);
     public void setTimePrefix(String format);
     public void setDebug(boolean on);
     public boolean getBebug();

@@ -212,7 +212,11 @@ public class CommandLineReader {
     /**
      *
      */
-    protected Logger log = new Logger();
+    protected LogReport log = new Logger();
+    
+    public void setReporter(LogReport reporter) {
+        log = reporter;
+    }
 
     private int getParameterIndex(String name, boolean exact) {
         int matches = 0;

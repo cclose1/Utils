@@ -281,7 +281,21 @@ public class JSONValue {
         
         return value;
     }
-
+    public double getDouble() throws JSONException {
+        if (type != JSONType.Number && type != JSONType.String) throw new JSONException(this, "Type is " + type + ". getDouble requires type Number or String");
+        
+        try {
+            return Double.parseDouble(value);
+        }
+        catch(NumberFormatException e) {
+            throw new JSONException(this, "Value " + value + " is not a valid double");            
+        }
+    }
+    public int getInt() throws JSONException {
+        if (type != JSONType.Number) throw new JSONException(this, "Type is " + type + ". getInt requires type " + JSONType.Number);
+        
+        return Integer.valueOf(value);
+    }
     /**
      * @return the object for the value.
      * 

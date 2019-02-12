@@ -19,5 +19,8 @@ public class JSONException extends Exception {
     }    
     public JSONException(JSONValue value, String message) {
         super("Value is type " + value.getType().toString() + ", " + message);
+    }  
+    public JSONException(String key, String message) {
+        super("Key " + key + " " + message);
     }
 }

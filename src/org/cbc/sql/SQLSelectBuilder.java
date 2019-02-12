@@ -50,7 +50,7 @@ public class SQLSelectBuilder extends SQLBuilder {
         addField(name, alias, nullDefault, null);
     }
     public void addDefaultedField(String name, int nullDefault) {
-        addField(name, null, nullDefault, null);
+        addField(name, name, nullDefault, null);
     }
     public void addDefaultedField(String name, String alias, int nullDefault) {
         addField(name, alias, nullDefault, null);
