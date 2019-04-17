@@ -7,6 +7,7 @@ package org.cbc.json;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
@@ -103,6 +104,12 @@ public class JSONObject implements Iterable<JSONNameValue>{
         members.put(name, value);
         
         if (order != null) order.add(name);
+    }
+    public void add(String name, String value) throws JSONException {
+        add(name, new JSONValue(value));
+    }
+    public void add(String name, double value) throws JSONException {
+        add(name, new JSONValue(value));
     }
     public void update(String name, JSONValue value) throws JSONException {
         if (!members.containsKey(name)) throw new JSONException("Member " + name + " does not exists");

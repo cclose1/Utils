@@ -125,11 +125,11 @@ public class LoadRates extends CurrencyRates {
         } catch (Exception ex) {
             load.getReporter().fatalError("Command line error-", ex);
         }
-        Report.comment(null, "Rate load complete");
+        Report.comment(null, "Rate load complete" + (load.getErrorHandler().errorsReported()? "- with errors. See error log" : ""));
         
         if (load.getErrorHandler().errorsReported()) {
             try {
-                System.err.println(Report.errorText(null, "Errors reported loading " + cmd.getString("currencies")));
+                System.err.println(Report.errorText(null, "Errors reported loading " + cmd.getString("currencies"))); 
             } catch (CommandLineReader.CommandLineException ex) {
             }
         }

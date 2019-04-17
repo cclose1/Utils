@@ -335,11 +335,16 @@ public class DatabaseSession {
 
         return st;
     }
-    public void executeUpdate(String sql) throws SQLException {
+    private ResultSet executeUpdate(String sql, boolean getGeneratedKey) throws SQLException {
+        ResultSet rs = null;
         querying = true;
 
         try {
-            getStatement().executeUpdate(sql);
+            Statement st = getStatement();
+            
+            st.executeUpdate(sql, getGeneratedKey? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
+            
+            if (getGeneratedKey) rs = st.getGeneratedKeys();
         } catch (SQLException ex) {
             if (reportException) {
                 synchronized (this) {
@@ -349,9 +354,16 @@ public class DatabaseSession {
             }
         }
         synchronized (this) {
-            querying = false;
+            querying        = false;
             reportException = true;
         }
+        return rs;
+    }
+    public void executeUpdate(String sql) throws SQLException {
+        executeUpdate(sql, false);
+    }
+    public ResultSet executeUpdateGetKey(String sql) throws SQLException {
+        return executeUpdate(sql, true);
     }
     public ResultSet executeQuery(String sql) throws SQLException {
         ResultSet results = null;

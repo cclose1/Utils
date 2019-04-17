@@ -411,6 +411,9 @@ public class CurrencyRates {
         if (values != null) value = values.get(key.to);
         return value;
     }
+    public void setMaxAge(int seconds) {
+        maxAge = seconds;
+    }
     public void loadRateData(String source, String target) {
         logRates.setRatesFilter(null);
         getRateData(new Key(source, target), logRates);
@@ -451,6 +454,9 @@ public class CurrencyRates {
     }
     public void setProvider(String provider) {
         setProvider(Provider.valueOf(provider));
+    }
+    public Provider getProvider() {
+        return provider;
     }
     public CurrencyRates(Provider provider, String scheme, String host, String path) {
         setProvider(provider, scheme, host, path);
