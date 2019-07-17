@@ -162,6 +162,44 @@ public abstract class SQLBuilder {
     public void addAnd(String field, String operator, int value) {
         addAnd(field, operator, "" + value, false);
     }
+    /*
+     * fields identifies the database field names for an And clause and consists of one or more clauses separated by the
+     * clauseSeparator character, e.g. ,. Each clause consists of the database field name seperated from from the values by the fieldSeparator e.g. =. 
+     * There can be one or more values separated by the valueSeparator character, e.g. |. Text values must be explicitly quoted, i.e. unlike the 
+     * other addAnd methods there is not a quoted parameter.
+     *
+     * If the values contain the % character, there must be only one value in the list and the comparison is done using LIKE. If the list has
+     * more than one value, the test uses the IN operator, otherwise, the comparison is done using =.
+     *
+     * E.g. the following fields string
+     *
+     *   Name='John'|'Bill', Account='AC1',Comment='%and', Code=1,6,10
+     *
+     * generates
+     *    Name    IN('John','Bill') AND
+     *    Account = 'AC1'           AND
+     *    Comment LIKE '%and'       AND
+     *    Code    IN(1,6,10)
+     */
+    public void addAnd(String fields, char clauseSeparator, char fieldSeparator, char valueSeparator) throws SQLException {
+        String clauses[] = fields.split("" + clauseSeparator);
+        
+        for (String clause : clauses) {
+            String flds[] = clause.split("" + fieldSeparator);
+            
+            if (flds.length != 2) throw new SQLException("Clause '" + clause + "' not of form Name = Value(s)");
+            
+            if (flds[1].contains("" + valueSeparator)) {
+                addAnd(flds[0], "IN", '(' + flds[1].replace('|', ',') + ')', false);
+            } else if (flds[1].contains("%")) 
+                addAnd(flds[0], "LIKE", flds[1], false);
+            else
+                addAnd(flds[0], "=", flds[1], false);
+        }        
+    }
+    public void addAnd(String fields) throws SQLException {
+        addAnd(fields, ',', '=', '|');
+    }
     public void addField(String name, String value) {
         addField(name, value, null);
     }
