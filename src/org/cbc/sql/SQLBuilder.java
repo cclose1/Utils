@@ -182,6 +182,8 @@ public abstract class SQLBuilder {
      *    Code    IN(1,6,10)
      */
     public void addAnd(String fields, char clauseSeparator, char fieldSeparator, char valueSeparator) throws SQLException {
+        if (fields == null || fields.length() == 0) return;
+        
         String clauses[] = fields.split("" + clauseSeparator);
         
         for (String clause : clauses) {
