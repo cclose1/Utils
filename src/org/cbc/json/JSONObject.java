@@ -5,9 +5,9 @@
 package org.cbc.json;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
@@ -227,13 +227,16 @@ public class JSONObject implements Iterable<JSONNameValue>{
         row = this.add("Header", (JSONArray)null);
 
         for (int i = 1; i <= count; i++) {
-            JSONObject col;
-            String     field    = rs.getMetaData().getColumnLabel(i);
-            Field      optional = fields.get(field);
+            ResultSetMetaData md       = rs.getMetaData();
+            String            field    = md.getColumnLabel(i);
+            Field             optional = fields.get(field);
+            JSONObject        col;
             
             col = row.addObject();
-            col.add("Name", new JSONValue(field));
-            col.add("Type", new JSONValue(rs.getMetaData().getColumnTypeName(i).toLowerCase()));
+            col.add("Name",      new JSONValue(field));
+            col.add("Type",      new JSONValue(md.getColumnTypeName(i).toLowerCase()));
+            col.add("Scale",     new JSONValue(md.getScale(i)));
+            col.add("Precision", new JSONValue(md.getPrecision(i)));
             
             if (optional != null) {
                 optional.present = true;
