@@ -55,14 +55,14 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void addDefaultedField(String name, String alias, int nullDefault) {
         addField(name, alias, nullDefault, null);
     }
-    public void addDefaultedField(String name, String alias, int nullDefault, int precision) {
-        if (precision == 0)
+    public void addDefaultedField(String name, String alias, int nullDefault, int scale) {
+        if (scale == 0)
             addField(null, "CAST(COALESCE(" + delimitName(name) + ", " + nullDefault + ") AS " + (protocol.equalsIgnoreCase("mysql")? "SIGNED" : "INT") + ")", alias, false);
         else
-            addField(null, "CAST(COALESCE(" + delimitName(name) + ", " + nullDefault + ") AS DECIMAL(12," + precision + "))", alias, false);
+            addField(null, "CAST(COALESCE(" + delimitName(name) + ", " + nullDefault + ") AS DECIMAL(12," + scale + "))", alias, false);
     }
-    public void addDefaultedField(String name, int nullDefault, int precision) {
-        addDefaultedField(name, name, nullDefault, precision);
+    public void addDefaultedField(String name, int nullDefault, int scale) {
+        addDefaultedField(name, name, nullDefault, scale);
     }
     public void addValueField(String alias, String value) {
         addField(null, value, alias);
