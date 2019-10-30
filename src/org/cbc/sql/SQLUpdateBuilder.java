@@ -19,7 +19,7 @@ public class SQLUpdateBuilder extends SQLBuilder {
         this.protocol = protocol;
     }
     public void addIncrementField(String name, int increment) {
-        addField(name, name + (increment < 0? '-' : '+') + increment, "", false);
+        addField(name, name + (increment < 0? '-' : '+') + increment, false);
     }
     public String build() {
         StringBuilder sql = new StringBuilder("UPDATE " + table + "\r\n SET");

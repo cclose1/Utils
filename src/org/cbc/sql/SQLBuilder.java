@@ -30,42 +30,163 @@ public abstract class SQLBuilder {
     private ArrayList<String>               uses         = new ArrayList<>(0);
     private SimpleDateFormat                fmtTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
+    protected enum ValueType {Field, Expression, Text, Double, Integer, Date};
+    
+    protected class Value {
+        protected ValueType type;
+        
+        protected String    txtValue;
+        protected double    dblValue;
+        protected int       intValue;
+        protected Date      datValue;
+        protected boolean   isQuoted;
+        
+        protected Value(String value, ValueType type) {
+            txtValue  = value;
+            this.type = type;
+            isQuoted  = type == ValueType.Text;
+        }
+        protected Value(int value) {
+            intValue = value;
+            type     = ValueType.Integer;
+        }
+        protected Value(double value) {
+            dblValue = value;
+            type     = ValueType.Double;
+        }
+        protected Value(Date value) {
+            datValue = value;
+            type     = ValueType.Date;
+            isQuoted = true;
+        }
+        protected void setQuoted(boolean yes) {
+            isQuoted = yes;
+        }
+        protected String getValue() {
+            String text = "";
+            
+            switch (type) {
+                case Field:
+                    text = txtValue == null? null : DatabaseSession.delimitName(txtValue, protocol);
+                    break;
+                case Expression:
+                    text = txtValue;
+                    break;
+                case Text:
+                    text = txtValue;
+                    break;
+                case Double:
+                    text = "" + dblValue;
+                    break;
+                case Integer:
+                    text = "" + dblValue;
+                    break;         
+                case Date:
+                    text = fmtTimestamp.format(datValue);
+                    break;         
+            }
+            return text == null? null : isQuoted? '\'' + DatabaseSession.escape(text) + '\'' : text;
+        }
+    }
+    public Value setValue(double value) {
+        return new Value(value);
+    }
+    public Value setValue(int value) {
+        return new Value(value);
+    }
+    public Value setValue(Date value) {
+        return new Value(value);
+    }
+    public Value setValue(String value) {
+        return new Value(value, ValueType.Text);
+    }
+    public Value setFieldValue(String value) {
+        return new Value(value, ValueType.Field);
+    }
+    public Value setExpressionValue(String value) {
+        return new Value(value, ValueType.Expression);
+    }
+    protected class Source extends Value {
+        protected Source(String value, ValueType type) {
+            super(value, type);
+        }
+        protected Source(int value) {
+            super(value);
+        }
+        protected Source(double value) {
+            super(value);
+        }
+    }
+    public Source setSource(int value) {
+        return new Source(value);
+    }
+    public Source setSource(String value) {
+        return new Source(value, ValueType.Text);
+    }
+    public Source setFieldSource(String value) {
+        return new Source(value, ValueType.Field);
+    }
+    public Source setExpressionSource(String value) {
+        return new Source(value, ValueType.Expression);
+    }    
+    protected class Cast {
+        private String type;
+        private int    precision = 0;
+        private int    scale     = 0;
+        
+        protected Cast(String type, int precision, int scale) {
+            this.type      = type;
+            this.precision = precision;
+            this.scale     = scale;
+        }
+        @Override
+        public String toString() {
+            if (precision < 0) return type;
+            if (scale     < 0) return type + '(' + precision + ')';
+            
+            return type + '(' + precision + ", " + scale + ')';
+        }
+    }
+    public Cast setCast(String type) {
+        return new Cast(type, -1, -1);
+    }
+    public Cast setCast(String type, int precision) {
+        return new Cast(type, precision, -1);
+    }
+    public Cast setCast(String type, int precision, int scale) {
+        return new Cast(type, precision, scale);
+    }
     public String delimitName(String name) {
         return name == null? null : DatabaseSession.delimitName(name, protocol);
     }
     protected class Field {
         private String  name;
-        private String  value;
-        private String  alias;
-        private boolean quoted;
+        private Source  source;
+        private Value   value;
         private String  cast;
 
-        public Field(String name, String value, String alias, boolean quoted) {
+        public Field(String name, String value, boolean quoted) {
             this.name   = name;
+            this.value  = new Value(value, ValueType.Text);
+            this.value.setQuoted(quoted);
+        }
+        public Field(String name, Value value) {
+            this.name  = name;
+            this.value = value;
+        }
+        public Field(String name, Source source, Value value) {
+            this.name   = name;
+            this.source = source;
             this.value  = value;
-            this.alias  = alias;
-            this.quoted = quoted;
-        }
-        public Field(String name, int value, String alias) {
-            this.name  = name;
-            this.value = "" + value;
-            this.alias = alias;
-            quoted     = false;
-        }
-        public Field(String name, double value, String alias) {
-            this.name  = name;
-            this.value = "" + value;
-            this.alias = alias;
-            quoted     = false;
         }
         public String getName() {            
             return delimitName(name);
         }
-        public String getValue() {
-            return value == null? null : isQuoted()? '\'' + DatabaseSession.escape(value) + '\'' : value;
+        public String getSource() {
+            return source == null? null : source.getValue();
         }
-        public String getAlias() {            
-            return delimitName(cast != null && alias ==null? name : alias);
+        public String getValue() {
+            return value == null? null : value.getValue();
         }
         public String getCast() {
             return cast;
@@ -73,11 +194,44 @@ public abstract class SQLBuilder {
         public void setCast(String cast) {
             this.cast = cast;
         }
+        protected void setObject(Object object) throws SQLException {
+            if (object == null) return;
+            
+            String cName = object.getClass().getSimpleName();
+            
+            switch (cName) {
+                case "Cast":
+                    cast = object.toString();
+                    break;
+                case "Source":
+                    source = (Source) object;
+                    break;
+                case "Value":
+                    value = (Value) object;
+                    break;
+                case "String":
+                    value = new Value((String) object, ValueType.Text);
+                    break;
+                case "Date":
+                    value = new Value((Date) object );
+                    break;
+                default:
+                    throw new SQLException("SQLBuilder.setObject does not support class " + cName);
+            }
+        }
+        protected void setIsQuoted(boolean source, boolean yes) {
+            if (source)
+                this.source.isQuoted = yes;
+            else
+                this.value.isQuoted = yes;
+        }
         /**
          * @return the quoted
          */
-        public boolean isQuoted() {
-            return quoted;
+        public boolean getIsQuoted(boolean source) {
+            if (source) return this.source.isQuoted;
+            
+            return value.isQuoted;
         }
     }
     public void setTable(String table) {
@@ -89,21 +243,28 @@ public abstract class SQLBuilder {
     public String getProtocol() {
         return protocol;
     }
-    protected Field addField(String name, String value, String alias, boolean quoted) {
-        Field f = new Field(name, value, alias, quoted);
+    protected Field addField(String name, String value, boolean quoted) {
+        Field f = new Field(name, value, quoted);
         fields.add(f);
         return f;
     }
-    protected Field addField(String name, String value, String alias) {
-        return addField(name, value, alias, true);
+    public void addField(String name, String value) {
+        addField(name, value, true);
     }
-    protected Field addField(String name, int value, String alias) {
-        Field f = new Field(name, value, alias);
-        fields.add(f);
-        return f;
+    public void addField(String name, Date value) {
+        addField(name, null, null, setValue(value));
     }
-    protected Field addField(String name, double value, String alias) {
-        Field f = new Field(name, value, alias);
+    public void addField(String name, int value) {
+        addField(name, null, null, setValue(value));
+    }
+    public void addField(String name, double value) {
+        addField(name, null, null, setValue(value));
+    }
+    protected Field addField(String name, Source source, Cast cast, Value nullValue) {
+        Field f = new Field(name, source, nullValue);
+        
+        if (cast != null) f.setCast(cast.toString());
+        
         fields.add(f);
         return f;
     }
@@ -201,18 +362,6 @@ public abstract class SQLBuilder {
     }
     public void addAnd(String fields) throws SQLException {
         addAnd(fields, ',', '=', '|');
-    }
-    public void addField(String name, String value) {
-        addField(name, value, null);
-    }
-    public void addField(String name, Date value) {
-        addField(name, fmtTimestamp.format(value), null);
-    }
-    public void addField(String name, int value) {
-        addField(name, value, null);
-    }
-    public void addField(String name, double value) {
-        addField(name, value, null);
     }
     public void addAndStart(Date start) {
         if (start != null) {

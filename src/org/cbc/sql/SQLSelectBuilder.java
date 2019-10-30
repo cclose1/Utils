@@ -6,11 +6,17 @@
 
 package org.cbc.sql;
 
+import java.sql.SQLException;
+
 /**
  *
  * @author Chris
  */
 public class SQLSelectBuilder extends SQLBuilder {
+    /*
+    protected class Field extends SQLBuilder.Field {
+    }
+    */
     private String options = null;
     private String from    = null;
     private String orderBy = null;
@@ -32,43 +38,38 @@ public class SQLSelectBuilder extends SQLBuilder {
         this.maxRows = rows;
     }
     public void addField(String name) {
-        addField(name, null, null);
+        addField(name, (Source)null, null);
     }
-    public void addField(String name, String alias) {
-        addField(name, null, alias);
+    /*
+     * Must override as SQLBuilder addField set the value rather than the alias
+     */
+    @Override
+    public void addField(String name, String source) {
+        addField(name, setFieldSource(source));
+//        addField(source, null, name, false);
     }
-    public void addField(String name, String alias, String value, String cast) {
-        addField(name, value, alias).setCast(cast);
+    
+    public void addField(String name, Source source, Cast cast) {
+        addField(name, source, cast, null);
     }
-    public void addField(String name, String alias, int value, String cast) {
-        addField(name, value, alias).setCast(cast);
+    public void addField(String name, Cast cast) {
+        addField(name, null, cast, null);
     }
-    public void addDefaultedField(String name, String nullDefault) {
-        addField(name, name, nullDefault, null);
+    public void addField(String name, Source source) {
+        addField(name, source, null, null);
     }
-    public void addDefaultedField(String name, String alias, String nullDefault) {
-        addField(name, alias, nullDefault, null);
+    public void addField(String name, Value value) {
+        addField(name, null, null, value);
     }
-    public void addDefaultedField(String name, int nullDefault) {
-        addField(name, name, nullDefault, null);
+    public void addField(String name, Object o1, Object o2, Object o3) throws SQLException {
+        Field f = addField(name, null, false);
+        
+        f.setObject(o1);
+        f.setObject(o2);
+        f.setObject(o3);
     }
-    public void addDefaultedField(String name, String alias, int nullDefault) {
-        addField(name, alias, nullDefault, null);
-    }
-    public void addDefaultedField(String name, String alias, int nullDefault, int scale) {
-        if (scale == 0)
-            addField(null, "CAST(COALESCE(" + delimitName(name) + ", " + nullDefault + ") AS " + (protocol.equalsIgnoreCase("mysql")? "SIGNED" : "INT") + ")", alias, false);
-        else
-            addField(null, "CAST(COALESCE(" + delimitName(name) + ", " + nullDefault + ") AS DECIMAL(12," + scale + "))", alias, false);
-    }
-    public void addDefaultedField(String name, int nullDefault, int scale) {
-        addDefaultedField(name, name, nullDefault, scale);
-    }
-    public void addValueField(String alias, String value) {
-        addField(null, value, alias);
-    }
-    public void addValueField(String alias, String value, boolean quoted) {
-        addField(null, value, alias, quoted);
+    public void addField(String name, Object o1, Object o2) throws SQLException {
+        addField(name, o1, o2, null);
     }
     public void setFrom(String from) {
         this.from = from;
@@ -76,6 +77,7 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void setOrderBy(String orderBy) {
         this.orderBy = orderBy;
     }
+    @Override
     public String build() {
         StringBuilder sql = new StringBuilder("SELECT ");
         char          sep = ' ';
@@ -89,24 +91,27 @@ public class SQLSelectBuilder extends SQLBuilder {
         if (fields.isEmpty()) {
             sql.append("* ");
         } else {
-            for (Field f : fields) {
+            for (Object x : fields) {    
+                Field f = (Field) x;
+                String name   = f.getName();
+                String source = f.getSource();
+                String cast   = f.getCast();
+                String value  = f.getValue();
+                String alias  = name;
                 
-                String id = f.getName();
+                if (source == null) source = name;
                 
-                if (id == null) 
-                    id = f.getValue();
-                else if (f.getValue() != null) 
-                    id = "COALESCE(" +  id + ", " + f.getValue() + ")";
+                if (value != null) source = "COALESCE(" +  source + ", " + value + ")";
+                if (cast  != null) source = "CAST(" + source + " AS " + cast + ")";
                 
-                id = f.getCast() != null? "CAST(" + id + " AS " + f.getCast() + ")" : id;
                 sql.append(sep);
                 sql.append("\r\n    ");
-                sql.append(id);
+                sql.append(source);
                 sep = ',';
             
-                if (f.getAlias() != null) {
+                if (alias != null && !source.equals(alias)) {
                     sql.append(" AS ");
-                    sql.append(f.getAlias());
+                    sql.append(alias);
                 }
             }
         }
