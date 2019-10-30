@@ -21,8 +21,8 @@ public class DateFormatter {
         /*
          * There is a time part, so count : to determine if min and sec format fields
          * are required. 
-         */
-        format.append(" H");
+         */        
+        format.append(format.length() == 0? "H" : " H");
 
         if (i != -1) {
             format.append(":m");

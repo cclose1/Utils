@@ -128,42 +128,14 @@ public abstract class SQLBuilder {
     }
     public Source setExpressionSource(String value) {
         return new Source(value, ValueType.Expression);
-    }    
-    protected class Cast {
-        private String type;
-        private int    precision = 0;
-        private int    scale     = 0;
-        
-        protected Cast(String type, int precision, int scale) {
-            this.type      = type;
-            this.precision = precision;
-            this.scale     = scale;
-        }
-        @Override
-        public String toString() {
-            if (precision < 0) return type;
-            if (scale     < 0) return type + '(' + precision + ')';
-            
-            return type + '(' + precision + ", " + scale + ')';
-        }
-    }
-    public Cast setCast(String type) {
-        return new Cast(type, -1, -1);
-    }
-    public Cast setCast(String type, int precision) {
-        return new Cast(type, precision, -1);
-    }
-    public Cast setCast(String type, int precision, int scale) {
-        return new Cast(type, precision, scale);
-    }
+    }   
     public String delimitName(String name) {
         return name == null? null : DatabaseSession.delimitName(name, protocol);
     }
     protected class Field {
-        private String  name;
-        private Source  source;
-        private Value   value;
-        private String  cast;
+        private   String  name;
+        private   Source  source;
+        private   Value   value;
 
         public Field(String name, String value, boolean quoted) {
             this.name   = name;
@@ -188,21 +160,12 @@ public abstract class SQLBuilder {
         public String getValue() {
             return value == null? null : value.getValue();
         }
-        public String getCast() {
-            return cast;
-        }
-        public void setCast(String cast) {
-            this.cast = cast;
-        }
         protected void setObject(Object object) throws SQLException {
             if (object == null) return;
             
             String cName = object.getClass().getSimpleName();
             
             switch (cName) {
-                case "Cast":
-                    cast = object.toString();
-                    break;
                 case "Source":
                     source = (Source) object;
                     break;
@@ -251,22 +214,19 @@ public abstract class SQLBuilder {
     public void addField(String name, String value) {
         addField(name, value, true);
     }
+    public void addField(String name, Value value) {
+        Field f = new Field(name, value);
+        fields.add(f);
+
+    }
     public void addField(String name, Date value) {
-        addField(name, null, null, setValue(value));
+        addField(name, setValue(value));
     }
     public void addField(String name, int value) {
-        addField(name, null, null, setValue(value));
+        addField(name, setValue(value));
     }
     public void addField(String name, double value) {
-        addField(name, null, null, setValue(value));
-    }
-    protected Field addField(String name, Source source, Cast cast, Value nullValue) {
-        Field f = new Field(name, source, nullValue);
-        
-        if (cast != null) f.setCast(cast.toString());
-        
-        fields.add(f);
-        return f;
+        addField(name, setValue(value));
     }
     protected Field getField(String name) {
         return fields.get(fields.indexOf(name));

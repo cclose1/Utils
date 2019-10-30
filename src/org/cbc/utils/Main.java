@@ -78,11 +78,13 @@ public class Main {
         Date test = (new SimpleDateFormat("H:m:s")).parse("12:34:56");
 
         try {
-            db.setUser("Test1", "Test1");
+            db.setUser("Test2", "Test2");
             db.connect();
             sql.addField("SeqNo");
             sql.addField("SessionId");
             sql.addField("UserId");
+            sql.addField("UserName1", "UserId");            
+            sql.addField("UserName2", sql.setFieldSource("UserId"), sql.setValue(""), sql.setCast("VARCHAR", 10));
             sql.addField("Last");
             sql.addField("Accesses");
             sql.addField("Deadlocks");
@@ -136,12 +138,10 @@ public class Main {
         testDate("01-08-2002");
         testDate("2001-08-2002");
         testJSON();
-        /*
         try {
             testSQLBuilder();
         } catch (ParseException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
-        */
     }
 }

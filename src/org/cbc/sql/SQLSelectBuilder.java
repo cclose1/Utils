@@ -37,18 +37,70 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void setMaxRows(int rows) {
         this.maxRows = rows;
     }
+    protected class Cast {
+        private String type;
+        private int    precision = 0;
+        private int    scale     = 0;
+        
+        protected Cast(String type, int precision, int scale) {
+            this.type      = type;
+            this.precision = precision;
+            this.scale     = scale;
+        }
+        @Override
+        public String toString() {
+            if (precision < 0) return type;
+            if (scale     < 0) return type + '(' + precision + ')';
+            
+            return type + '(' + precision + ", " + scale + ')';
+        }
+    }
+    public Cast setCast(String type) {
+        return new Cast(type, -1, -1);
+    }
+    public Cast setCast(String type, int precision) {
+        return new Cast(type, precision, -1);
+    }
+    public Cast setCast(String type, int precision, int scale) {
+        return new Cast(type, precision, scale);
+    }
+    private class Field extends SQLBuilder.Field {
+        private String  cast;
+        
+        public Field(String name) {
+            super(name, null, null);
+        }
+        public Field(String name, Source source, Cast cast, Value value) {
+            super(name, source, value);
+            
+            if (cast != null) this.cast = cast.toString();
+        }
+        protected void setObject(Object obj) throws SQLException {
+            if (obj != null && obj.getClass().getSimpleName().equals("Cast"))
+                cast = obj.toString();
+            else
+                super.setObject(obj);
+        }
+        protected String getCast() {
+            return cast;
+        }
+        protected void setCast(String cast) {
+            this.cast = cast;
+        }
+    }
+    protected Field addField(String name, Source source, Cast cast, Value value) {
+        Field f = new Field(name, source, cast, value);
+        
+        fields.add(f);
+        
+        return f;
+    }
     public void addField(String name) {
-        addField(name, (Source)null, null);
-    }
-    /*
-     * Must override as SQLBuilder addField set the value rather than the alias
-     */
-    @Override
+        addField(name, null, null, null);
+    } 
     public void addField(String name, String source) {
-        addField(name, setFieldSource(source));
-//        addField(source, null, name, false);
-    }
-    
+        addField(name, setFieldSource(source), null, null);
+    }    
     public void addField(String name, Source source, Cast cast) {
         addField(name, source, cast, null);
     }
@@ -62,7 +114,7 @@ public class SQLSelectBuilder extends SQLBuilder {
         addField(name, null, null, value);
     }
     public void addField(String name, Object o1, Object o2, Object o3) throws SQLException {
-        Field f = addField(name, null, false);
+        Field f = addField(name, null, null, null);
         
         f.setObject(o1);
         f.setObject(o2);
@@ -91,8 +143,8 @@ public class SQLSelectBuilder extends SQLBuilder {
         if (fields.isEmpty()) {
             sql.append("* ");
         } else {
-            for (Object x : fields) {    
-                Field f = (Field) x;
+            for (Object fObj : fields) {    
+                Field f       = (Field) fObj;
                 String name   = f.getName();
                 String source = f.getSource();
                 String cast   = f.getCast();
