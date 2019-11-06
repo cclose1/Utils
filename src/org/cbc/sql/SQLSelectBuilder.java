@@ -43,7 +43,7 @@ public class SQLSelectBuilder extends SQLBuilder {
         private int    scale     = 0;
         
         protected Cast(String type, int precision, int scale) {
-            this.type      = type;
+            this.type      = type.equalsIgnoreCase("varchar") && protocol.equalsIgnoreCase("mysql")? "CHAR" : type;
             this.precision = precision;
             this.scale     = scale;
         }

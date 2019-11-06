@@ -206,7 +206,7 @@ public abstract class SQLBuilder {
     public String getProtocol() {
         return protocol;
     }
-    protected Field addField(String name, String value, boolean quoted) {
+    public Field addField(String name, String value, boolean quoted) {
         Field f = new Field(name, value, quoted);
         fields.add(f);
         return f;
@@ -249,6 +249,13 @@ public abstract class SQLBuilder {
             this.where.append(' ');
             this.where.append(where);
         }
+    }
+    public void addAndClause(String clause) {
+        if (where == null) where = new StringBuilder();
+        
+        if (where.length() != 0) where.append(" AND ");
+        
+        where.append(clause);        
     }
     public void addAnd(String field, String operator, String value, boolean quoted) {
         if (where == null) where = new StringBuilder();
