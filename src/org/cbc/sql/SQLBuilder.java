@@ -320,7 +320,7 @@ public abstract class SQLBuilder {
             if (flds.length != 2) throw new SQLException("Clause '" + clause + "' not of form Name = Value(s)");
             
             if (flds[1].contains("" + valueSeparator)) {
-                addAnd(flds[0], "IN", '(' + flds[1].replace('|', ',') + ')', false);
+                addAnd(flds[0], "IN", '(' + flds[1].replace(valueSeparator, ',') + ')', false);
             } else if (flds[1].contains("%")) 
                 addAnd(flds[0], "LIKE", flds[1], false);
             else
