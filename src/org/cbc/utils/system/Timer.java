@@ -58,9 +58,6 @@ public class Timer {
 
         return elapsed;
     }
-    public double getElapsed(int precision) {
-        return getElapsed();
-    }
     public String addElapsed(String message) {
         return message + " took " + format.format(getElapsed()) + " seconds";
     }

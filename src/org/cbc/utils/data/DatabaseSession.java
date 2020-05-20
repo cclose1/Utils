@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Properties;
 import org.cbc.application.reporting.Report;
+import org.cbc.utils.system.Timer;
 
 /**
  *
@@ -160,6 +161,7 @@ public class DatabaseSession {
     private int          defaultIsolation    = 0;
     private char         propertyDelim       = ';';
     private char         nextDelim           = ';';
+    private double       longStatementTime   = 0;
     private StringBuffer connectString;
 
     public static String delimitName(String name, String protocol) {
@@ -194,7 +196,15 @@ public class DatabaseSession {
     public String getConnectionString() {
         return connectString.toString();
     }
-        
+    /*
+     * MaxTime is the maximum number of seconds a statement can take before it is reported to the comment log. The report contains the timestamp of
+     * completion, the SQL statement and the duration of the statement.
+     *
+     * If maxTime <= 0, no report is generated.
+     */
+    public void SetLongStatementTime(double maxTime) {
+        longStatementTime = maxTime;
+    }        
     private void startConnectionString(String protocol, String server, String database) {
         this.protocol = protocol;
         this.server   = server;
@@ -335,28 +345,60 @@ public class DatabaseSession {
 
         return st;
     }
-    private ResultSet executeUpdate(String sql, boolean getGeneratedKey) throws SQLException {
-        ResultSet rs = null;
-        querying = true;
-
-        try {
-            Statement st = getStatement();
+    private class StatementWrapper {
+        private Timer     t = new Timer();
+        private String    sql;
+        public  Statement statement;
+        
+        StatementWrapper(String sql, Statement statement) throws SQLException {
+            t.setAutoReset(false);
             
-            st.executeUpdate(sql, getGeneratedKey? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
+            if (statement == null) statement = connection.createStatement();
             
-            if (getGeneratedKey) rs = st.getGeneratedKeys();
-        } catch (SQLException ex) {
-            if (reportException) {
+            this.sql       = sql;
+            this.statement = statement;
+            
+            statement.setQueryTimeout(statementTimeout);
+            querying = true;
+        }
+        StatementWrapper(String sql) throws SQLException {
+            this(sql, null);
+        }
+        private void reportLongStatement() {
+            if (t.getElapsed() > longStatementTime && longStatementTime > 0) {
+                Report.comment(null, t.addElapsed("SQL Statement \"" + sql + "\"" ));
+            }
+        }
+        void close(SQLException ex) throws SQLException {
+            if (reportException) {                
                 synchronized (this) {
                     querying = false;
                 }
+                reportLongStatement();
                 throw ex;
             }
         }
-        synchronized (this) {
-            querying        = false;
-            reportException = true;
+        void close() {
+            synchronized (this) {
+                reportLongStatement();
+                querying        = false;
+                reportException = true;
+            }
         }
+    }
+    private ResultSet executeUpdate(String sql, boolean getGeneratedKey) throws SQLException {
+        ResultSet        rs = null;
+        StatementWrapper wr = new StatementWrapper(sql);
+
+        try {            
+            wr.statement.executeUpdate(sql, getGeneratedKey? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
+            
+            if (getGeneratedKey) rs = wr.statement.getGeneratedKeys();
+        } catch (SQLException ex) {
+            wr.close(ex);
+        }
+        wr.close();
+        
         return rs;
     }
     public void executeUpdate(String sql) throws SQLException {
@@ -365,55 +407,35 @@ public class DatabaseSession {
     public ResultSet executeUpdateGetKey(String sql) throws SQLException {
         return executeUpdate(sql, true);
     }
-    public ResultSet executeQuery(String sql) throws SQLException {
-        ResultSet results = null;
-        
+    public ResultSet executeQuery(String sql) throws SQLException {        
         if (connection == null) return null;
         
-        querying = true;
+        ResultSet        results = null;
+        StatementWrapper wr      = new StatementWrapper(sql);
             
         try {
-            results = getStatement().executeQuery(sql);
+            results = wr.statement.executeQuery(sql);
         } catch (SQLException ex) {
-            if (reportException) {
-                synchronized (this) {
-                    querying = false;
-                }
-                throw ex;
-            }
+            wr.close(ex);
         }
-
-        synchronized (this) {
-            querying = false;
-            reportException = true;
-        }
+        wr.close();
+        
         return results;
     }
     public ResultSet updateQuery(String sql, int setType) throws SQLException {
-        ResultSet results = null;
-
         if (connection == null) return null;
-
-        querying = true;
+        
+        ResultSet        results = null;
+        StatementWrapper wr      = null;
 
         try {
-            Statement st = connection.createStatement(setType, ResultSet.CONCUR_UPDATABLE);
-
-            st.setQueryTimeout(statementTimeout);
-            results = st.executeQuery(sql);
+            wr      = new StatementWrapper(sql, connection.createStatement(setType, ResultSet.CONCUR_UPDATABLE));
+            results = wr.statement.executeQuery(sql);
         } catch (SQLException ex) {
-            if (reportException) {
-                synchronized (this) {
-                    querying = false;
-                }
-                throw ex;
-            }
+            wr.close(ex);
         }
-
-        synchronized (this) {
-            querying = false;
-            reportException = true;
-        }
+        wr.close();
+        
         return results;
     }
     public PreparedStatement prepareStatement(String sql) throws SQLException {

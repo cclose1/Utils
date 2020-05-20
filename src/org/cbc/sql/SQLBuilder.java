@@ -79,7 +79,7 @@ public abstract class SQLBuilder {
                     text = "" + dblValue;
                     break;
                 case Integer:
-                    text = "" + dblValue;
+                    text = "" + intValue;
                     break;         
                 case Date:
                     text = fmtTimestamp.format(datValue);

@@ -293,7 +293,7 @@ public class FileTransfer {
             copy.timestamp = new Date(copy.getSource().lastModified());
             result.getDetails().add(copy);
         }
-        result.copyTime = timer.getElapsed(3);
+        result.copyTime = timer.getElapsed();
         return result;
     }
     public void copyFolder(File source, File dest) throws IOException {
