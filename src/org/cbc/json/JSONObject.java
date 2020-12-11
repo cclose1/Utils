@@ -153,6 +153,21 @@ public class JSONObject implements Iterable<JSONNameValue>{
         return members.get(name);
     }
     /**
+     * Returns the value of object member name.
+     * 
+     * @param  name     Required member name.
+     * @param  required If true name must be a member of the object.
+     * @return The value of the member name or null if not a member and required is false.
+     * @throws JSONException Thrown if member is not found and required is true;
+     */
+    public JSONValue get(String name, boolean required) throws JSONException {
+        JSONValue value = get(name);
+        
+        if (value == null && required) throw new JSONException(name, "is not a member of the object");
+        
+        return value;
+    }
+    /**
      * Appends the object as a string to buffer formatted as defined by format.
      * @param buffer Target for the formatted string.
      * @param format Format applied to the object string.

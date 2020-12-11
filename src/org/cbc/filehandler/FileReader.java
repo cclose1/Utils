@@ -26,12 +26,12 @@ import java.util.zip.ZipFile;
  * @author CClose changed again 19-Oct-15
  */
 public class FileReader {
-    private Logger              log               = new Logger();
-    private ZipFile             zip               = null;
-    private Archive             rar               = null;
-    private FileTransfer.Filter filter            = new FileTransfer().getFilter();
-    private boolean             expandZip         = true;
-    private boolean             expandDirectories = false;
+    private static Logger              log               = new Logger();
+    private        ZipFile             zip               = null;
+    private        Archive             rar               = null;
+    private        FileTransfer.Filter filter            = new FileTransfer().getFilter();
+    private        boolean             expandZip         = true;
+    private        boolean             expandDirectories = false;
 
     /**
      * @return the expandZip
@@ -60,7 +60,76 @@ public class FileReader {
             }
         }
     }
-
+    public static class DirectoryStats {
+        private int  directories;
+        private int  files;
+        private int  depth;
+        private int  maxDepth;
+        private long totalFileSize;
+        private long totalDirectorySize;
+        
+        private void loadStats(java.io.File file) {
+            if (file.isFile()) {
+                files         += 1;
+                totalFileSize += file.length();
+            } else {         
+                totalDirectorySize += file.length();
+                directories        += 1;
+                depth              += 1;
+                
+                if (depth > maxDepth) maxDepth = depth;
+                
+                if (file.listFiles() == null) {
+                    /*
+                     * Not sure what this implies. For now do nothing.
+                     */
+                    log.comment("loadStats file " + file.getAbsolutePath() + " returned a null file list");
+                } else {
+                    for (int i = 0; i < file.listFiles().length; i++) {
+                        loadStats(file.listFiles()[i]);
+                    }
+                }
+            depth--;                    
+            }
+            return;
+        }
+        private DirectoryStats(java.io.File file) {
+            loadStats(file);
+        }
+        /**
+         * @return the directories
+         */
+        public int getDirectories() {
+            return directories;
+        }
+        /**
+         * @return the files
+         */
+        public int getFiles() {
+            return files;
+        }
+        /**
+         * @return the depth
+         */
+        public int getDepth() {
+            return maxDepth;
+        }
+        /**
+         * @return the totalFileSize
+         */
+        public long getTotalFileSize() {
+            return totalFileSize;
+        }
+        /**
+         * @return the totalDirectorySize
+         */
+        public long getTotalDirectorySize() {
+            return totalDirectorySize;
+        }
+    }
+    static public DirectoryStats getDirectoryStats(java.io.File directory) {
+        return new DirectoryStats(directory);
+    }
     public class File {
         private File() {
         }
@@ -68,12 +137,14 @@ public class FileReader {
         private ZipEntry     zipFile     = null;
         private FileHeader   rarFile     = null;
         private InputStream  inputStream = null;
+        private String       root        = null;
 
         protected File(ZipEntry file) {
             zipFile = file;
         }
-        protected File(java.io.File file) {
-            stdFile = file;
+        protected File(String root, java.io.File file) {
+            this.root    = root;
+            this.stdFile = file;
         }
         protected File(FileHeader file) {
             rarFile = file;
@@ -90,6 +161,14 @@ public class FileReader {
             if (rarFile != null) return new JavaFileName(rarFile.getFileNameString()).name;
             
             return null;
+        }
+        public String getRoot() {
+            return root;
+        }
+        public String getRelativeName() throws IOException {
+            if (root == null) return getName();
+            
+            return stdFile.getCanonicalPath().substring(root.length());
         }
         public InputStream open() throws IOException {
             if (stdFile != null) {
@@ -153,15 +232,15 @@ public class FileReader {
         cal.add(GregorianCalendar.DAY_OF_MONTH, -days);
         setSince(cal.getTime());
     }
-    private void loadFiles(ArrayList<File> files, java.io.File directory) throws IOException {
+    private void loadFiles(ArrayList<File> files, String root, java.io.File directory) throws IOException {
         java.io.File[] list = FileTransfer.getFiles(directory, filter);
 
         if (list != null) {
             for (java.io.File f : list) {
                 if (f.isDirectory() && expandDirectories)
-                    loadFiles(files, f);
+                    loadFiles(files, root, f);
                 else
-                    files.add(new File(f));
+                    files.add(new File(root, f));
             }
         }
     }
@@ -190,13 +269,17 @@ public class FileReader {
                        files.add(new File(h));
                    }
                }
-                System.out.println(h.getFileNameString() + " w " + h.getFileNameW());
+               System.out.println(h.getFileNameString() + " w " + h.getFileNameW());
             }
         } else
-            loadFiles(files, new java.io.File(directory));
+            loadFiles(files, directory, new java.io.File(directory));
         
         return files;
     }
+    public ArrayList<File> getFiles(java.io.File directory) throws IOException {
+        return getFiles(directory.getCanonicalPath());
+    }
+    
 
     public void close() throws IOException {
         if (zip != null) {

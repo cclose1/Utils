@@ -217,7 +217,6 @@ public abstract class SQLBuilder {
     public void addField(String name, Value value) {
         Field f = new Field(name, value);
         fields.add(f);
-
     }
     public void addField(String name, Date value) {
         addField(name, setValue(value));
@@ -329,6 +328,11 @@ public abstract class SQLBuilder {
     }
     public void addAnd(String fields) throws SQLException {
         addAnd(fields, ',', '=', '|');
+    }
+    public void addAnd(SQLNamedValues values) {
+        for (SQLNamedValues.NamedValue value : values.getNamedValues()) {
+            addAnd(value.getName(), value.getOperator(), value.getValue(), false); // Value already has quotes applied
+        }
     }
     public void addAndStart(Date start) {
         if (start != null) {

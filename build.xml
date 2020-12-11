@@ -70,4 +70,7 @@
     nbproject/build-impl.xml file. 
 
     -->
+    <target name="-post-jar">
+        <copy file="${dist.jar}" todir="C:/MyFiles/Android/EnterMeasure/app/libs"/> 
+    </target> 
 </project>

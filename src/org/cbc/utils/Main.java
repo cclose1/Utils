@@ -7,6 +7,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -132,11 +135,30 @@ public class Main {
             Report.error(date, ex);
         }
     }
+    private static void testDate(String date, String format) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+        
+
+        DateFormatter fm = new DateFormatter(format);
+        try {
+            
+LocalDateTime dt = LocalDateTime.parse(date, formatter);
+
+            Object d = formatter.parse(date);
+            Report.comment(null, d.toString());
+        } catch (Exception ex) {
+            Report.error(date, ex);
+        }
+    }
+  
     public static void main(String[] args) {
         testDate("01-08-02");
         testDate("2014-08-02");
         testDate("01-08-2002");
         testDate("2001-08-2002");
+        testDate("2020-08x28 23:12:12", "yyyy-MM-dd HH:mm:ss");
+        testDate("2020-08-28 23:12:12", "yyyy-MM-dd HH:mm:ss");
+        testDate("2020-08-36 23:12:12", "yyyy-MM-dd HH:mm:ss");
         testJSON();
         try {
             testSQLBuilder();

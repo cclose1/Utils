@@ -183,9 +183,11 @@ public class JSONValue {
         this.value = value;
         this.type  = JSONType.String;
         
-        if (value == null || isQuoted) {
+        if (isQuoted) 
+            storeString(value == null? "" : value);
+        else if (value == null)
             storeString(value);
-        } else {
+        else {
             if (value.equalsIgnoreCase("null")) {
                 this.type  = JSONType.Null;
                 this.value = value.toLowerCase();
@@ -295,6 +297,11 @@ public class JSONValue {
         if (type != JSONType.Number) throw new JSONException(this, "Type is " + type + ". getInt requires type " + JSONType.Number);
         
         return Integer.valueOf(value);
+    }
+    public boolean getBoolean() throws JSONException {
+        if (type != JSONType.Boolean) throw new JSONException(this, "Type is " + type + ". getBoolean requires type " + JSONType.Boolean);
+        
+        return Boolean.valueOf(value);
     }
     /**
      * @return the object for the value.

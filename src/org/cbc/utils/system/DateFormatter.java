@@ -14,6 +14,7 @@ import java.util.Date;
  * @author CClose
  */
 public class DateFormatter {
+    private boolean useLenient = true;
     private SimpleDateFormat formatter = new SimpleDateFormat();
 
     private static void addTimeFormat(StringBuilder format, String time) {
@@ -81,7 +82,13 @@ public class DateFormatter {
         }        
         return fmt.toString();
     }
-    public static Date parseDate(String date) throws ParseException {        
+    public static Date parseDate(String date, boolean lenient) throws ParseException {
+        SimpleDateFormat fm = new SimpleDateFormat(getDateFormat(date));
+        
+        fm.setLenient(lenient);
+        return new SimpleDateFormat(getDateFormat(date)).parse(date);
+    }
+    public static Date parseDate(String date) throws ParseException {
         return new SimpleDateFormat(getDateFormat(date)).parse(date);
     }
     public DateFormatter() {
@@ -90,6 +97,11 @@ public class DateFormatter {
     public DateFormatter(String format) {
         formatter = new SimpleDateFormat(format);
     }
+    public DateFormatter(String format, boolean lenient) {
+        this(format);
+        this.useLenient = lenient;
+        formatter.setLenient(lenient);
+    }
     public String format(Date date, String format) {
         return new SimpleDateFormat(format).format(date);
     }
@@ -97,7 +109,11 @@ public class DateFormatter {
         return formatter.format(date);
     }
     public Date parse(String date, String format) throws ParseException {
-        return new SimpleDateFormat(format).parse(date);
+        SimpleDateFormat f = new SimpleDateFormat(format);
+        
+        f.setLenient(useLenient);
+                
+        return f.parse(date);
     }
     public Date parse(String date) throws ParseException {
         return formatter.parse(date);
