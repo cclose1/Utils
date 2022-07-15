@@ -126,6 +126,19 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void setFrom(String from) {
         this.from = from;
     }
+    public void addOrderByField(String name, boolean desc) {
+        if (orderBy == null)
+            orderBy = "";
+        else
+            orderBy += ", ";  
+        
+        orderBy += delimitName(name);
+        
+        if (desc) orderBy += " DESC";
+    }
+    /* 
+     * Better to use above method to ensure that field names are correctly deliited.    
+     */
     public void setOrderBy(String orderBy) {
         this.orderBy = orderBy;
     }
@@ -160,8 +173,10 @@ public class SQLSelectBuilder extends SQLBuilder {
                 sql.append("\r\n    ");
                 sql.append(source);
                 sep = ',';
-            
+                
                 if (alias != null && !source.equals(alias)) {
+                    if (alias.contains(" ")) alias = "'" + alias + "'";
+                    
                     sql.append(" AS ");
                     sql.append(alias);
                 }

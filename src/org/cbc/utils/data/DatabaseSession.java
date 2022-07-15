@@ -390,7 +390,7 @@ public class DatabaseSession {
         ResultSet        rs = null;
         StatementWrapper wr = new StatementWrapper(sql);
 
-        try {            
+        try {
             wr.statement.executeUpdate(sql, getGeneratedKey? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
             
             if (getGeneratedKey) rs = wr.statement.getGeneratedKeys();
@@ -414,6 +414,22 @@ public class DatabaseSession {
         StatementWrapper wr      = new StatementWrapper(sql);
             
         try {
+            results = wr.statement.executeQuery(sql);
+        } catch (SQLException ex) {
+            wr.close(ex);
+        }
+        wr.close();
+        
+        return results;
+    }
+    public ResultSet executeQuery(String sql, int setType) throws SQLException {        
+        if (connection == null) return null;
+        
+        ResultSet        results = null;
+        StatementWrapper wr      = null;
+
+        try {
+            wr      = new StatementWrapper(sql, connection.createStatement(setType, ResultSet.CONCUR_READ_ONLY));
             results = wr.statement.executeQuery(sql);
         } catch (SQLException ex) {
             wr.close(ex);

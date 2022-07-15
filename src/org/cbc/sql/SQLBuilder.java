@@ -30,62 +30,23 @@ public abstract class SQLBuilder {
     private ArrayList<String>               uses         = new ArrayList<>(0);
     private SimpleDateFormat                fmtTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
-    protected enum ValueType {Field, Expression, Text, Double, Integer, Date};
+    protected enum ValueType {Text, Double, Integer, Date};
     
-    protected class Value {
-        protected ValueType type;
-        
-        protected String    txtValue;
-        protected double    dblValue;
-        protected int       intValue;
-        protected Date      datValue;
-        protected boolean   isQuoted;
-        
-        protected Value(String value, ValueType type) {
-            txtValue  = value;
-            this.type = type;
-            isQuoted  = type == ValueType.Text;
+    protected class Value extends SQLValue {                
+        protected Value(String value) {
+            super(value);
         }
         protected Value(int value) {
-            intValue = value;
-            type     = ValueType.Integer;
+            super(value);
         }
         protected Value(double value) {
-            dblValue = value;
-            type     = ValueType.Double;
+            super(value);
         }
         protected Value(Date value) {
-            datValue = value;
-            type     = ValueType.Date;
-            isQuoted = true;
+            super(value);
         }
-        protected void setQuoted(boolean yes) {
-            isQuoted = yes;
-        }
-        protected String getValue() {
-            String text = "";
-            
-            switch (type) {
-                case Field:
-                    text = txtValue == null? null : DatabaseSession.delimitName(txtValue, protocol);
-                    break;
-                case Expression:
-                    text = txtValue;
-                    break;
-                case Text:
-                    text = txtValue;
-                    break;
-                case Double:
-                    text = "" + dblValue;
-                    break;
-                case Integer:
-                    text = "" + intValue;
-                    break;         
-                case Date:
-                    text = fmtTimestamp.format(datValue);
-                    break;         
-            }
-            return text == null? null : isQuoted? '\'' + DatabaseSession.escape(text) + '\'' : text;
+        public String getValue() {
+            return getValue(protocol);
         }
     }
     public Value setValue(double value) {
@@ -98,17 +59,26 @@ public abstract class SQLBuilder {
         return new Value(value);
     }
     public Value setValue(String value) {
-        return new Value(value, ValueType.Text);
+        return new Value(value);
     }
     public Value setFieldValue(String value) {
-        return new Value(value, ValueType.Field);
+        Value val = new Value(value);
+        
+        val.setIsQuoted(false);
+        
+        return val;
     }
     public Value setExpressionValue(String value) {
-        return new Value(value, ValueType.Expression);
+        return new Value(value);
     }
-    protected class Source extends Value {
-        protected Source(String value, ValueType type) {
-            super(value, type);
+    protected class Source extends Value {        
+        protected Source(String value) {
+            super(value);
+        }
+        protected Source(String value, boolean isFieldName) {
+            super(value);
+            setIsQuoted(false);
+            setIsFieldName(isFieldName);
         }
         protected Source(int value) {
             super(value);
@@ -121,13 +91,13 @@ public abstract class SQLBuilder {
         return new Source(value);
     }
     public Source setSource(String value) {
-        return new Source(value, ValueType.Text);
+        return new Source(value);
     }
     public Source setFieldSource(String value) {
-        return new Source(value, ValueType.Field);
+        return new Source(value, true);
     }
     public Source setExpressionSource(String value) {
-        return new Source(value, ValueType.Expression);
+        return new Source(value, false);
     }   
     public String delimitName(String name) {
         return name == null? null : DatabaseSession.delimitName(name, protocol);
@@ -139,8 +109,8 @@ public abstract class SQLBuilder {
 
         public Field(String name, String value, boolean quoted) {
             this.name   = name;
-            this.value  = new Value(value, ValueType.Text);
-            this.value.setQuoted(quoted);
+            this.value  = new Value(value);
+            this.value.setIsQuoted(quoted);
         }
         public Field(String name, Value value) {
             this.name  = name;
@@ -173,7 +143,7 @@ public abstract class SQLBuilder {
                     value = (Value) object;
                     break;
                 case "String":
-                    value = new Value((String) object, ValueType.Text);
+                    value = new Value((String) object);
                     break;
                 case "Date":
                     value = new Value((Date) object );
@@ -184,17 +154,17 @@ public abstract class SQLBuilder {
         }
         protected void setIsQuoted(boolean source, boolean yes) {
             if (source)
-                this.source.isQuoted = yes;
+                this.source.setIsQuoted(yes);
             else
-                this.value.isQuoted = yes;
+                this.value.setIsQuoted(yes);
         }
         /**
          * @return the quoted
          */
         public boolean getIsQuoted(boolean source) {
-            if (source) return this.source.isQuoted;
+            if (source) return this.source.getIsQuoted();
             
-            return value.isQuoted;
+            return value.getIsQuoted();
         }
     }
     public void setTable(String table) {
@@ -261,7 +231,7 @@ public abstract class SQLBuilder {
         
         if (where.length() != 0) where.append(" AND ");
         
-        where.append(field);
+        where.append(delimitName(field));
         where.append(' ');
         where.append(operator);
         

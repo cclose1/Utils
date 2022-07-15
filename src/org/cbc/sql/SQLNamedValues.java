@@ -34,11 +34,12 @@ public class SQLNamedValues {
             this.type     = SQLBuilder.ValueType.Text;
             this.txtValue = value;
         }
+        protected NamedValue(String name, String value, boolean isQuoted) {
+            this(name, value, null);
+            this.isQuoted = isQuoted;
+        }
         protected NamedValue(String name, String value) {
-            this(name, null, null);
-            txtValue = value;
-            type     = SQLBuilder.ValueType.Text;
-            isQuoted = true;
+            this(name, value, true);
         }
         protected NamedValue(String name, int value) {
             this(name, null, null);

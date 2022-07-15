@@ -526,7 +526,7 @@ public class CommandLineReader {
         Parameter p = getParameter(name);
 
         if (p.fields == null) {
-            if (allowNull) return null;
+            if (allowNull || p.optional) return null;
 
             throw new CommandLineException(p, "Not present");
         }
