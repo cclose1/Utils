@@ -167,6 +167,14 @@ public abstract class SQLBuilder {
             return value.getIsQuoted();
         }
     }
+    public String getSource(String name) {
+        for (Field field : fields) {
+            if (field.name.equals(name)) {
+                return field.getSource();
+            }
+        }
+        return null;
+    }
     public void setTable(String table) {
         this.table = table;
     }
@@ -227,11 +235,13 @@ public abstract class SQLBuilder {
         where.append(clause);        
     }
     public void addAnd(String field, String operator, String value, boolean quoted) {
+        String source = getSource(field);
+        
         if (where == null) where = new StringBuilder();
         
         if (where.length() != 0) where.append(" AND ");
-        
-        where.append(delimitName(field));
+    
+        where.append(source != null? source : delimitName(field));
         where.append(' ');
         where.append(operator);
         
