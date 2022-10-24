@@ -77,7 +77,7 @@ public class Main {
     }
     public static void testSQLBuilder() throws ParseException {
         DatabaseSession  db  = new DatabaseSession("sqlserver", "127.0.0.1", "Expenditure");
-        SQLSelectBuilder sql = new SQLSelectBuilder();
+        SQLSelectBuilder sql = new SQLSelectBuilder("", db.getProtocol());
         Date test = (new SimpleDateFormat("H:m:s")).parse("12:34:56");
 
         try {

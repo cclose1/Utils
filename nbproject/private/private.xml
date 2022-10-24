@@ -8,7 +8,11 @@
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLBuilder.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/Environment.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/DateFormatter.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/LogRates.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/DatabaseLogger.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLSelectBuilder.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/LoadRates.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/CurrencyRates.java</file>
         </group>
     </open-files>
 </project-private>

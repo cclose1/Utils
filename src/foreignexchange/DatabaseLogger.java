@@ -50,9 +50,7 @@ public class DatabaseLogger implements LogRates {
     public void record(Date timestamp, CurrencyRates.Provider provider, String from, HashMap<String, Double> rates) throws SQLException {
         Trace t = new Trace("openDatabase");
         
-        SQLInsertBuilder builder = new SQLInsertBuilder("CurrencyRate");
-        
-        builder.setProtocol(session.getProtocol());
+        SQLInsertBuilder builder = new SQLInsertBuilder("CurrencyRate", session.getProtocol());
         
         if (timestamp == null) timestamp = new Date();
         

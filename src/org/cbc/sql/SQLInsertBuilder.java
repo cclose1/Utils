@@ -6,20 +6,16 @@
 
 package org.cbc.sql;
 
-import org.cbc.sql.SQLBuilder;
-
 /**
  *
  * @author Chris
  */
 public class SQLInsertBuilder extends SQLBuilder {
-    public SQLInsertBuilder(String table) {
-        this.table = table;
-    }
     public SQLInsertBuilder(String table, String protocol) {
         this.table    = table;
         this.protocol = protocol;
     }
+    @Override
     public String build() {
         StringBuilder sql    = new StringBuilder("INSERT " + table + "(\r\n   ");
         StringBuilder values = new StringBuilder(") VALUES (\r\n");

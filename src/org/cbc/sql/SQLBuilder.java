@@ -8,7 +8,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,7 +27,6 @@ public abstract class SQLBuilder {
     
     private HashMap<String, ParameterValue> parameters   = new HashMap<>(0);
     private ArrayList<String>               uses         = new ArrayList<>(0);
-    private SimpleDateFormat                fmtTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
     protected enum ValueType {Text, Double, Integer, Date};
     
@@ -255,7 +253,7 @@ public abstract class SQLBuilder {
     public String getTimestamp(Date date) {
         if (date == null) date = new Date();
         
-        return fmtTimestamp.format(date);
+        return DatabaseSession.getDateTimeString(date, protocol);
     }
     public String getWhere() {
         return where.toString();
@@ -264,7 +262,7 @@ public abstract class SQLBuilder {
         if (value != null && value.trim().length()!= 0) addAnd(field, operator, value, true);
     }
     public void addAnd(String field, String operator, Date value) {
-        if (value != null) addAnd(field, operator, fmtTimestamp.format(value), true);
+        if (value != null) addAnd(field, operator, DatabaseSession.getDateTimeString(value, protocol), true);
     }
     public void addAnd(String field, String operator, int value) {
         addAnd(field, operator, "" + value, false);

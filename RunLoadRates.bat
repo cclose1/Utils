@@ -1,1 +1,0 @@
-java -cp "C:\MyFiles\Java\Utils\dist\Utils.jar" foreignexchange.LoadRates 127.0.0.1 -User appuser -Password ap-qr01

@@ -22,14 +22,9 @@ public class SQLSelectBuilder extends SQLBuilder {
     private String orderBy = null;
     private int    maxRows = -1;
     
-    public SQLSelectBuilder(String table) {
-        this.table = table;
-    }
     public SQLSelectBuilder(String table, String protocol) {
         this.table    = table;
         this.protocol = protocol;
-    }
-    public SQLSelectBuilder() {
     }
     public void setOptions(String options) {
         this.options = options;
@@ -75,6 +70,7 @@ public class SQLSelectBuilder extends SQLBuilder {
             
             if (cast != null) this.cast = cast.toString();
         }
+        @Override
         protected void setObject(Object obj) throws SQLException {
             if (obj != null && obj.getClass().getSimpleName().equals("Cast"))
                 cast = obj.toString();
@@ -98,6 +94,7 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void addField(String name) {
         addField(name, null, null, null);
     } 
+    @Override
     public void addField(String name, String source) {
         addField(name, setFieldSource(source), null, null);
     }    
@@ -110,6 +107,7 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void addField(String name, Source source) {
         addField(name, source, null, null);
     }
+    @Override
     public void addField(String name, Value value) {
         addField(name, null, null, value);
     }

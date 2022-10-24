@@ -11,9 +11,6 @@ package org.cbc.sql;
  * @author Chris
  */
 public class SQLUpdateBuilder extends SQLBuilder {
-    public SQLUpdateBuilder(String table) {
-        this.table = table;
-    }
     public SQLUpdateBuilder(String table, String protocol) {
         this.table    = table;
         this.protocol = protocol;
@@ -21,6 +18,7 @@ public class SQLUpdateBuilder extends SQLBuilder {
     public void addIncrementField(String name, int increment) {
         addField(name, name + (increment < 0? '-' : '+') + increment, false);
     }
+    @Override
     public String build() {
         StringBuilder sql = new StringBuilder("UPDATE " + table + "\r\n SET");
         char          sep = ' ';
@@ -28,7 +26,7 @@ public class SQLUpdateBuilder extends SQLBuilder {
         for (Field f : fields) {
             sql.append(sep);
             sql.append("\r\n    ");
-            sql.append(f.getName() + " = " + f.getValue());
+            sql.append(f.getName()).append(" = ").append(f.getValue());
             sep = ',';
         }
         addWhere(sql);

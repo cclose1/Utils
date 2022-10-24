@@ -5,7 +5,6 @@
  */
 package org.cbc.sql;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.cbc.utils.data.DatabaseSession;
 
@@ -23,9 +22,6 @@ public class SQLValue {
     private Date    datValue;
     private boolean isQuoted;
     private boolean isFieldName;
-    private String  protocol = "sqlserver";
-
-    private SimpleDateFormat fmtTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     
     public SQLValue(String value) {
         txtValue  = value;
@@ -75,13 +71,9 @@ public class SQLValue {
                 text = "" + intValue;
                 break;
             case Date:
-                text = fmtTimestamp.format(datValue);
+                text = DatabaseSession.getDateTimeString(datValue, protocol);
                 break;
         }
-        return text == null ? null : isQuoted ? '\'' + DatabaseSession.escape(text) + '\'' : text;
-        
-    }
-    public String getValue() {
-        return getValue(protocol);
+        return text == null ? null : isQuoted ? '\'' + DatabaseSession.escape(text) + '\'' : text;   
     }
 }

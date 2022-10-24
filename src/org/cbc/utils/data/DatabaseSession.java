@@ -12,8 +12,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.Properties;
 import org.cbc.application.reporting.Report;
@@ -164,6 +166,42 @@ public class DatabaseSession {
     private double       longStatementTime   = 0;
     private StringBuffer connectString;
 
+    private static String formatDate(Date dateTime, String format) {
+        return new SimpleDateFormat(format).format(dateTime);
+    }
+    /*
+     * The following convert a Date into value that can be passed as string that can be converted
+     * to date using jdbc.
+     */
+    public static String getDateTimeString(Date dateTime, String protocol) {
+        String format;
+        
+        switch (protocol) {
+            case "sqlserver":
+                format = "dd-MM-yyyy HH:mm:ss";
+                break;
+            default:
+                format = "yyyy-MM-dd HH:mm:ss";
+                
+        }
+        return formatDate(dateTime, format);
+    }
+    public static String getDateString(Date dateTime, String protocol) {
+        String format;
+        
+        switch (protocol) {
+            case "sqlserver":
+                format = "dd-MM-yyyy";
+                break;
+            default:
+                format = "yyyy-MM-dd";
+                
+        }
+        return formatDate(dateTime, format);
+    }
+    public static String getTimeString(Date dateTime) {
+        return formatDate(dateTime, "HH:mm:ss");
+    }
     public static String delimitName(String name, String protocol) {
         String flds[] = name.split("\\.");
         String prefix = null;
@@ -186,6 +224,9 @@ public class DatabaseSession {
         }
         return prefix != null? prefix + '.' + name : name;
     }
+    public String delimitName(String name) {
+        return delimitName(name, protocol);
+    }
     public void addConnectionProperty(String name, String value) {
         connectString.append(propertyDelim);
         connectString.append(name);    
@@ -204,31 +245,46 @@ public class DatabaseSession {
      */
     public void SetLongStatementTime(double maxTime) {
         longStatementTime = maxTime;
-    }        
-    private void startConnectionString(String protocol, String server, String database) {
+    }
+    private void loadDriver(String driver, String defaultDriver) throws ClassNotFoundException {
+        Class.forName(driver == null? defaultDriver : driver);
+    }
+    private void startConnectionString(String protocol, String server, String database, String driver) {
         this.protocol = protocol;
         this.server   = server;
         this.database = database;
         
         try {
-            if (protocol.equals("sqlserver")) {
-                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-                connectString = new StringBuffer("jdbc:sqlserver://" + server + ":1433");
-                addConnectionProperty("databaseName", database);
-            } else if(protocol.equals("jdbc:odbc")) {
-                Class.forName("sun.jdbc.odbc.JdbcOdbcDriver");
-                updateResultSetType = ResultSet.TYPE_SCROLL_INSENSITIVE;
-                connectString       = new StringBuffer("jdbc:odbc:Driver=" + server + ";" + database);
-            } else if(protocol.equals("mysql")) {
-                Class.forName("com.mysql.jdbc.Driver");
-                connectString = new StringBuffer("jdbc:" + protocol + "://" + server + "/" + database);
-                propertyDelim = '?';
-                nextDelim     = '&';
-            } else if(protocol.equals("postgresql")) {
-                Class.forName("org.postgresql.Driver");
-                connectString = new StringBuffer("jdbc:" + protocol + "://" + server + "/" + database);
-            } else
-                log.fatalError("JDBC protocol " + protocol + " not supported");
+            /*
+             * loadDriver seems to be required for code run by tomcat, but not for code executed directly.
+             * The disadvantage of using loadDriver seems to be that if the class name changes, the new version is
+             * not picked up. Don't fully understand this, seems to be something to do with SPI and API.
+             */
+            switch (protocol) {
+                case "sqlserver":
+                    loadDriver(driver, "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+                    connectString = new StringBuffer("jdbc:sqlserver://" + server + ":1433");
+                    addConnectionProperty("databaseName", database);
+                    break;
+                case "jdbc:odbc":
+                    loadDriver(driver, "sun.jdbc.odbc.JdbcOdbcDriver");
+                    updateResultSetType = ResultSet.TYPE_SCROLL_INSENSITIVE;
+                    connectString       = new StringBuffer("jdbc:odbc:Driver=" + server + ";" + database);
+                    break;
+                case "mysql":
+                    loadDriver(driver, "com.mysql.cj.jdbc.Driver");
+                    connectString = new StringBuffer("jdbc:" + protocol + "://" + server + "/" + database);
+                    propertyDelim = '?';
+                    nextDelim     = '&';
+                    break;
+                case "postgresql":
+                    loadDriver(driver, "org.postgresql.Driver");
+                    connectString = new StringBuffer("jdbc:" + protocol + "://" + server + "/" + database);
+                    break;
+                default:
+                    log.fatalError("JDBC protocol " + protocol + " not supported");
+                    break;
+            }
         } catch (ClassNotFoundException ex) {
             log.comment("Probably missing the jdbc jar file on the classpath for protocol " + protocol);
             log.fatalError(ex);
@@ -238,7 +294,7 @@ public class DatabaseSession {
         
     }
     public DatabaseSession(String protocol, String server, String database) {
-        startConnectionString(protocol, server, database);
+        startConnectionString(protocol, server, database, null);
     }
     public void setUser(String user, String password) {
         if (user != null && user.trim().length() != 0)
@@ -258,12 +314,9 @@ public class DatabaseSession {
         if (protocol.equals("postgresql")) executeUpdate("set standard_conforming_strings=on");
     }
     public void connect(String protocol, String server, String database, String user, String password) throws SQLException{
-        startConnectionString(protocol, server, database);
+        startConnectionString(protocol, server, database, null);
         setUser(user, password);
         connect();
-    }
-    public String delimitName(String name) {
-        return delimitName(name, protocol);
     }
     public void logException(Exception exception) {
         if (reportException) {
@@ -338,7 +391,7 @@ public class DatabaseSession {
     public boolean isOpen() {
         return connection != null;
     }
-    private Statement getStatement() throws SQLException {
+    private Statement getStatementx() throws SQLException {
         Statement st = connection.createStatement();
 
         st.setQueryTimeout(statementTimeout);
@@ -374,7 +427,7 @@ public class DatabaseSession {
                 synchronized (this) {
                     querying = false;
                 }
-                reportLongStatement();
+                reportLongStatement();ex.getMessage();
                 throw ex;
             }
         }
@@ -431,11 +484,10 @@ public class DatabaseSession {
         try {
             wr      = new StatementWrapper(sql, connection.createStatement(setType, ResultSet.CONCUR_READ_ONLY));
             results = wr.statement.executeQuery(sql);
+            wr.close();
         } catch (SQLException ex) {
-            wr.close(ex);
+            if (wr != null) wr.close(ex);
         }
-        wr.close();
-        
         return results;
     }
     public ResultSet updateQuery(String sql, int setType) throws SQLException {
@@ -447,11 +499,10 @@ public class DatabaseSession {
         try {
             wr      = new StatementWrapper(sql, connection.createStatement(setType, ResultSet.CONCUR_UPDATABLE));
             results = wr.statement.executeQuery(sql);
+            wr.close();
         } catch (SQLException ex) {
-            wr.close(ex);
-        }
-        wr.close();
-        
+            if (wr != null) wr.close(ex);
+        }        
         return results;
     }
     public PreparedStatement prepareStatement(String sql) throws SQLException {
@@ -464,7 +515,7 @@ public class DatabaseSession {
         return updateQuery(sql, updateResultSetType);
     }
     public ResultSet insertTable(String table) throws SQLException {
-        return updateQuery("SELECT * FROM " + table + " WHERE 1=0", updateResultSetType);
+        return updateQuery("SELECT * FROM " + delimitName(table, protocol) + " WHERE 1=0", updateResultSetType);
     }
     public void killQuery() {
         synchronized (this) {
@@ -484,11 +535,11 @@ public class DatabaseSession {
         ArrayList<String> headings = null;
 
         if (includeHeadings) {
-            headings = new ArrayList<String>();
+            headings = new ArrayList<>();
             data.add(headings);
         }
         while ((i++ < maxRows || maxRows == 0) && records.next()) {
-            ArrayList<String> row = new ArrayList<String>();
+            ArrayList<String> row = new ArrayList<>();
 
             for (int col = 0; col < records.getMetaData().getColumnCount(); col++) {
                 if (i == 1 && headings != null) headings.add(records.getMetaData().getColumnName(col + 1));
@@ -499,7 +550,7 @@ public class DatabaseSession {
         }
     }
     public ArrayList<String> getColumn(String sql, String column) {
-        ArrayList<String> data = new ArrayList<String>();
+        ArrayList<String> data = new ArrayList<>();
 
         try {
             ResultSet records;
@@ -555,25 +606,27 @@ public class DatabaseSession {
         connection.createStatement().execute(createDDL.toString());
     }
     public boolean columnExists(String table, String column) throws SQLException {
-        ResultSet rs = connection.getMetaData().getColumns(null, null, table, column);
-        boolean exists = rs.next();
-
-        rs.close();
+        boolean exists;
+        
+        try (
+                ResultSet rs = connection.getMetaData().getColumns(null, null, table, column)) {
+            exists = rs.next();
+        }
         return exists;
     }
     public HashMap<String, Column> getColumns(String table) throws SQLException {
-        ResultSet rs = connection.getMetaData().getColumns(null, null, table, "%");
-        HashMap<String, Column> columns = new HashMap<String, Column>();
-        
-        while (rs.next()) {
-            Column column = new Column(rs.getString("COLUMN_NAME"));
-            
-            column.setPosition(rs.getInt("ORDINAL_POSITION"));
-            column.setType(rs.getInt("DATA_TYPE"));
-            column.setTypeName(rs.getString("TYPE_NAME"));
-            columns.put(column.getName(), column);
+        HashMap<String, Column> columns;
+        try (ResultSet rs = connection.getMetaData().getColumns(null, null, table, "%")) {
+            columns = new HashMap<>();
+            while (rs.next()) {
+                Column column = new Column(rs.getString("COLUMN_NAME"));
+                
+                column.setPosition(rs.getInt("ORDINAL_POSITION"));
+                column.setType(rs.getInt("DATA_TYPE"));
+                column.setTypeName(rs.getString("TYPE_NAME"));
+                columns.put(column.getName(), column);
+            }
         }
-        rs.close();
         
         return columns;
     }
@@ -582,7 +635,7 @@ public class DatabaseSession {
     }
     private double getSize(String size) {
         String fields[] = size.split(" ");
-        double   value    = 0;
+        double   value;
         
         value = Double.parseDouble(fields[0]);
         
