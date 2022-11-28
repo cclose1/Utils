@@ -108,6 +108,12 @@ public class JSONObject implements Iterable<JSONNameValue>{
     public void add(String name, String value) throws JSONException {
         add(name, new JSONValue(value));
     }
+    public void add(String name, boolean value) throws JSONException {
+        add(name, new JSONValue(value));
+    }
+    public void add(String name, int value) throws JSONException {
+        add(name, new JSONValue(value));
+    }
     public void add(String name, double value) throws JSONException {
         add(name, new JSONValue(value));
     }

@@ -9,7 +9,6 @@ import org.cbc.utils.system.Logger;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
 
 /**
  *
@@ -39,31 +38,27 @@ public class DataDatabaseWriter  extends DataOutputStream {
         }
         batchCount = 0;
     }
-    private void setAvailableColumnsOld() {
-        for (int i = 0; i < getColumnCount(); i++) {
-            DataField field = getColumn(i);
-            try {
-                field.setHidden(!db.columnExists(table, field.getHeading()));
-            } catch (SQLException ex) {
-                reportError("Set available on " + table + '.' + field.getHeading(), ex);
-            }
-        }
-    }
     private void setAvailableColumns() {
         try {
-            HashMap<String, DatabaseSession.Column> columns = db.getColumns(table);
+            /*
+             * The remove comments are the statements that were replaced by the preceding
+             * statement. This because db.getColumns is to be removed.
+            */
+            DatabaseSession.TableDefinition tbDef = db.new TableDefinition(table);
+//  remove  HashMap<String, DatabaseSession.Column> columns = db.getColumns(table);
             
             for (int i = 0; i < getColumnCount(); i++) {
                 DataField field = getColumn(i);
                 
-                field.setHidden(!columns.containsKey(field.getHeading()));
+                field.setHidden(!tbDef.isColumn(field.getHeading()));
+//  remove      field.setHidden(columns.containsKey(field.getHeading()));
             }
         } catch (SQLException ex) {
              reportError("Set available on " + table, ex);
         }
     }
     private void prepare() throws SQLException {
-        StringBuffer insert = new StringBuffer("INSERT INTO " + table + " (");
+        StringBuilder insert = new StringBuilder("INSERT INTO " + table + " (");
         StringBuffer params = null;
 
         if (exists) setAvailableColumns();

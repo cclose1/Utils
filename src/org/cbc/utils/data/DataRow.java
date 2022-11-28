@@ -33,7 +33,7 @@ public class DataRow {
             return error;
         }
     }
-    private ArrayList<DataField> columns = new ArrayList<DataField>();
+    private ArrayList<DataField> columns = new ArrayList<>();
 
     public boolean canAddHeaders() {
         return !headersClosed;
