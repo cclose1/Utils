@@ -18,11 +18,11 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Properties;
+import org.cbc.Utils;
 import org.cbc.application.reporting.Report;
 import org.cbc.json.JSONArray;
 import org.cbc.json.JSONException;
 import org.cbc.json.JSONObject;
-import org.cbc.json.JSONValue;
 import org.cbc.utils.system.Timer;
 
 /**
@@ -151,6 +151,7 @@ public class DatabaseSession {
         protected Column(String name, TableDefinition table) {
             this.name         = name;
             this.display      = !name.equalsIgnoreCase("modified");
+            this.modifiable   = true;
             this.pKeyPosition = -1;
             this.table        = table;
         }
@@ -179,7 +180,7 @@ public class DatabaseSession {
             return typeName;
         }
         public String getDisplayName() {
-            return displayName == null ? name : displayName;
+            return displayName == null ? Utils.splitToWords(name) : displayName;
         }
         public void setDisplayName(String displayName) {
             this.displayName = displayName;
@@ -328,7 +329,6 @@ public class DatabaseSession {
             throw new SQLException("Property " + name + " changed from " + property + " to " + value);
         }
         private class ObjectIterator implements Iterator<Column> {
-
             int count = 0;
 
             @Override
@@ -367,7 +367,11 @@ public class DatabaseSession {
             index     = new HashMap<>();
             indexes   = getTableIndexes(catalog, schemaPattern, name);
             
-            ResultSet rs = connection.getMetaData().getColumns(catalog, schemaPattern, name, "%");
+            ResultSet rs = connection.getMetaData().getTables(null, null, name, null);
+            
+            if (!rs.next()) throw new SQLException("Table " + name + " does not exist");
+            
+            rs = connection.getMetaData().getColumns(catalog, schemaPattern, name, "%");
 
             while (rs.next()) {
                 Column column = new Column(rs.getString("COLUMN_NAME"), this);
@@ -397,23 +401,25 @@ public class DatabaseSession {
             }
             setMaxDisplayLabel();
         }
-
+        private int toIndex(String columnName) throws SQLException {
+            columnName = columnName.toLowerCase();
+            
+            if (!this.index.containsKey(columnName)) throw new SQLException("Column " + columnName + " is not in table " + name);
+            
+            return this.index.get(columnName.toLowerCase());
+        }
         public TableDefinition(String name) throws SQLException {
             this(null, null, name);
         }
-
         public Column getColumn(int index) {
             return columns.get(index);
         }
-
-        public final Column getColumn(String name) {
-            return getColumn(this.index.get(name.toLowerCase()));
+        public final Column getColumn(String name) throws SQLException {
+            return getColumn(toIndex(name));
         }
-
         public String getName() {
             return name;
         }
-
         public HashMap<String, ArrayList<Column>> getIndexes() {
             return indexes;
         }
@@ -430,7 +436,7 @@ public class DatabaseSession {
             return maxDisplayLabel;
         }
         public String getDisplayName() {
-            return displayName == null? name : displayName;
+            return displayName == null? Utils.splitToWords(name) : displayName;
         }
         public void setDisplayName(String displayName) {
             this.displayName = displayName;
@@ -465,6 +471,7 @@ public class DatabaseSession {
                 colAttrs.add("PKeyColumn",    col.isPrimeKeyColumn());
                 colAttrs.add("Modifiable",    col.isModifiable());
                 colAttrs.add("Nullable",      col.isNullable());
+                cols.add(colAttrs);
             }
             return json;
         }
@@ -820,13 +827,27 @@ public class DatabaseSession {
 
         return rs;
     }
-
-    public void executeUpdate(String sql) throws SQLException {
-        executeUpdate(sql, false);
+    public int executeUpdate(String sql) throws SQLException {
+        StatementWrapper wr = new StatementWrapper(sql);
+        return wr.statement.executeUpdate(sql, Statement.NO_GENERATED_KEYS);
     }
 
     public ResultSet executeUpdateGetKey(String sql) throws SQLException {
-        return executeUpdate(sql, true);
+        ResultSet rs = null;
+        StatementWrapper wr = new StatementWrapper(sql);
+
+        try {
+            wr.statement.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
+
+            rs = wr.statement.getGeneratedKeys();
+            
+        } catch (SQLException ex) {
+            wr.close(ex);
+        }
+        wr.close();
+
+        return rs;
+//        return executeUpdate(sql, true);
     }
 
     public ResultSet executeQuery(String sql) throws SQLException {

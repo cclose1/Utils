@@ -190,6 +190,24 @@ public abstract class SQLBuilder {
     public void addField(String name, String value) {
         addField(name, value, true);
     }
+    public void addField(String name, String value, String type) throws ParseException {
+        /*
+         * Force a null update if value is null or value is empty and type is not a character type.
+         */
+        if (value == null || (value.isEmpty() && !type.equals("VARCHAR") && !type.equals("CHAR"))) type = "NULL";
+    
+        switch (type) {
+            case "NULL":
+                addField(name, "null", false);
+                break;
+            case "DATETIME":
+            case "DATE":
+                addField(name, DateFormatter.parseDate(value));
+                break;
+            default:
+                addField(name, value, true);
+        };
+    }
     public void addField(String name, Value value) {
         Field f = new Field(name, value);
         fields.add(f);
@@ -243,7 +261,9 @@ public abstract class SQLBuilder {
         where.append(' ');
         where.append(operator);
         
-        if (quoted) {
+        if (value == null)
+            where.append("IS NULL");
+        else if (quoted) {
             where.append('\'');
             DatabaseSession.appendEscaped(where, value);
             where.append('\'');
@@ -259,13 +279,33 @@ public abstract class SQLBuilder {
         return where.toString();
     }
     public void addAnd(String field, String operator, String value) {
-        if (value != null && value.trim().length()!= 0) addAnd(field, operator, value, true);
+        addAnd(field, operator, value, true);
     }
     public void addAnd(String field, String operator, Date value) {
-        if (value != null) addAnd(field, operator, DatabaseSession.getDateTimeString(value, protocol), true);
+        if (value == null)
+            addAnd(field, operator, null, true);
+        else
+            addAnd(field, operator, DatabaseSession.getDateTimeString(value, protocol), true);
     }
     public void addAnd(String field, String operator, int value) {
         addAnd(field, operator, "" + value, false);
+    }
+    public void addAnd(String field, String operator, String value, String type) throws ParseException {
+        if (value == null || (value.isEmpty() && !type.equals("VARCHAR") && !type.equals("CHAR"))) type = "NULL";
+
+        if (value != null && value.trim().length()!= 0) {
+            switch (type) {
+                case "NULL":
+                    addAnd(field, operator, null, true);
+                    break;
+                case "DATETIME":
+                case "DATE":
+                    addAnd(field, operator, DateFormatter.parseDate(value));
+                    break;
+                default:
+                    addAnd(field, operator, value, true);
+            }
+        }
     }
     /*
      * fields identifies the database field names for an And clause and consists of one or more clauses separated by the
