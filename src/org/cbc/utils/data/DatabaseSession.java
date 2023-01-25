@@ -140,6 +140,7 @@ public class DatabaseSession {
         private int             pKeyPosition;
         private int             type;
         private String          typeName;
+        private String          source;
         private boolean         auto;
         private boolean         generated;
         private boolean         modifiable;
@@ -166,6 +167,30 @@ public class DatabaseSession {
         }
         private void setPosition(int position) {
             this.position = position;
+        }
+        /*
+         * The column in table providing the possible field values.
+         */
+        public void setSource(String table, String column) throws SQLException {
+            ResultSet rs = connection.getMetaData().getTables(null, null, table, null);
+            
+            if (!rs.next()) throw new SQLException("Table " + table + " does not exist");
+            
+            rs = connection.getMetaData().getColumns(null, null, table, column);
+            
+            if (!rs.next()) throw new SQLException("Column " + column + " does not exist in table " + table);
+            
+            source = table + "." + column;
+        }
+        public void setSource(String tableColumn) throws SQLException {
+            String fields [] = tableColumn.split(".");
+            
+            if (fields.length != 2) throw new SQLException("Table column " + tableColumn + "must be of the form table.column");
+            
+            setSource(fields[0], fields[1]);
+        }
+        public String getSource() {
+            return source;
         }
         public int getType() {
             return type;
@@ -271,7 +296,6 @@ public class DatabaseSession {
             return defaultValue;
         }
     }
-
     private HashMap<String, ArrayList<Column>> getTableIndexes(String catalog, String schemaPattern, String table) throws SQLException {
         Column column;
         String iName;
@@ -305,6 +329,7 @@ public class DatabaseSession {
         private String          schema;
         private String          catalog;
         private String          displayName;
+        private String          parent;
         private int             maxDisplayLabel;
         
         private ArrayList<Column>                  columns;
@@ -417,6 +442,18 @@ public class DatabaseSession {
         public final Column getColumn(String name) throws SQLException {
             return getColumn(toIndex(name));
         }
+        public Column getKeyColumn(int pKeyPosition) throws SQLException {           
+            Iterator<Column> it = this.iterator();
+            Column           col;
+            
+            while (it.hasNext()) {
+                col = it.next();
+                
+                if (col.getpKeyPosition() == pKeyPosition) return col;
+            }
+            
+            throw new SQLException("Table " + name + " not have primary key column at position " + pKeyPosition);       
+        }
         public String getName() {
             return name;
         }
@@ -441,16 +478,41 @@ public class DatabaseSession {
         public void setDisplayName(String displayName) {
             this.displayName = displayName;
         }
+        public void setParent(String tableName) throws SQLException {
+            TableDefinition  owner = new TableDefinition(tableName);
+                     
+            Iterator<Column> it    = owner.iterator();
+            Column           colo;
+            Column           colm;
+            
+            parent = tableName;
+            /*
+             * Link each primary key column to that of the corresponding parent column.
+             */
+            
+            while (it.hasNext()) {
+                colo = it.next();
+                
+                if (!colo.isPrimeKeyColumn()) continue;
+                
+                colm = this.getKeyColumn(colo.getpKeyPosition());
+                colm.setSource(tableName, colo.getName());
+            }
+        }
+        public String getParent() {
+            return parent;
+        }
         public JSONObject toJson(boolean displayOnly) throws JSONException {
-            Iterator<Column> it = this.iterator();
+            Iterator<Column> it     = this.iterator();
+            JSONObject       json   = new JSONObject();
+            JSONObject       header = new JSONObject();
+            JSONArray        cols   = new JSONArray();
             Column           col;
-            JSONObject      json   = new JSONObject();
-            JSONObject      header = new JSONObject();
-            JSONArray       cols   = new JSONArray();
             
             header.add("Name",           getName());
             header.add("DisplayName",    getDisplayName());
             header.add("MaxColumnLabel", getMaxDisplayLabel());
+            header.add("Parent",         getParent());
             
             json.add("Header",  header);
             json.add("Columns", cols);
@@ -462,6 +524,7 @@ public class DatabaseSession {
                 
                 JSONObject colAttrs = new JSONObject();
                 colAttrs.add("Name",          col.getName());
+                colAttrs.add("Source",        col.getSource());
                 colAttrs.add("Label",         col.getDisplayName());
                 colAttrs.add("Type",          col.getTypeName());
                 colAttrs.add("Position",      col.getPosition());
@@ -500,7 +563,6 @@ public class DatabaseSession {
     private static String formatDate(Date dateTime, String format) {
         return new SimpleDateFormat(format).format(dateTime);
     }
-
     /*
      * The following convert a Date into value that can be passed as string that can be converted
      * to date using jdbc.
@@ -589,7 +651,12 @@ public class DatabaseSession {
     public void SetLongStatementTime(double maxTime) {
         longStatementTime = maxTime;
     }
-
+    public String getDateString(Date dateTime) {
+        return getDateString(dateTime, protocol);
+    }
+    public String getDateTimeString(Date dateTime) {
+        return getDateTimeString(dateTime, protocol);
+    }
     private void loadDriver(String driver, String defaultDriver) throws ClassNotFoundException {
         Class.forName(driver == null ? defaultDriver : driver);
     }
@@ -1105,8 +1172,7 @@ public class DatabaseSession {
             }
         } else if (getProtocol().equalsIgnoreCase("mysql")) {
             switch (exception.getErrorCode()) {
-                case 1022:
-                case 1068:
+                case 1062:
                     return Error.Duplicate;
                 case 1213:
                     return Error.Deadlock;

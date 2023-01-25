@@ -13,14 +13,15 @@
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLSelectBuilder.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/LoadRates.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/CurrencyRates.java</file>
-            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/data/DatabaseSession.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/json/JSONValue.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/DateFormatter.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/data/DataStream.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/CommandLineReader.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/json/JSONObject.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/data/DataDatabaseWriter.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/DatabaseLogger.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLValue.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLDeleteBuilder.java</file>
         </group>
     </open-files>
 </project-private>

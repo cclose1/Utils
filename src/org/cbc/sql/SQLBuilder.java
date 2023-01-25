@@ -250,7 +250,7 @@ public abstract class SQLBuilder {
         
         where.append(clause);        
     }
-    public void addAnd(String field, String operator, String value, boolean quoted) {
+    public void addAnd(String field, String operator, String value, boolean quoted) throws SQLException {
         String source = getSource(field);
         
         if (where == null) where = new StringBuilder();
@@ -259,16 +259,28 @@ public abstract class SQLBuilder {
     
         where.append(source != null? source : delimitName(field));
         where.append(' ');
-        where.append(operator);
         
-        if (value == null)
-            where.append("IS NULL");
-        else if (quoted) {
-            where.append('\'');
-            DatabaseSession.appendEscaped(where, value);
-            where.append('\'');
-        } else
-            where.append(value);
+        if (value == null) {
+            switch (operator) {
+                case "=":
+                    where.append("IS NULL");
+                    break;
+                case "<>":
+                    where.append("IS NOT NULL");
+                    break;
+                default:
+                    throw new SQLException("Operator " + operator + " is not valid for a null value");
+            }
+        } else {
+            where.append(operator);
+            
+            if (quoted) {
+                where.append('\'');
+                DatabaseSession.appendEscaped(where, value);
+                where.append('\'');
+            } else
+                where.append(value);
+        }
     }
     public String getTimestamp(Date date) {
         if (date == null) date = new Date();
@@ -278,19 +290,19 @@ public abstract class SQLBuilder {
     public String getWhere() {
         return where.toString();
     }
-    public void addAnd(String field, String operator, String value) {
+    public void addAnd(String field, String operator, String value) throws SQLException {
         addAnd(field, operator, value, true);
     }
-    public void addAnd(String field, String operator, Date value) {
+    public void addAnd(String field, String operator, Date value) throws SQLException {
         if (value == null)
             addAnd(field, operator, null, true);
         else
             addAnd(field, operator, DatabaseSession.getDateTimeString(value, protocol), true);
     }
-    public void addAnd(String field, String operator, int value) {
+    public void addAnd(String field, String operator, int value) throws SQLException {
         addAnd(field, operator, "" + value, false);
     }
-    public void addAnd(String field, String operator, String value, String type) throws ParseException {
+    public void addAnd(String field, String operator, String value, String type) throws ParseException, SQLException {
         if (value == null || (value.isEmpty() && !type.equals("VARCHAR") && !type.equals("CHAR"))) type = "NULL";
 
         if (value != null && value.trim().length()!= 0) {
@@ -347,12 +359,12 @@ public abstract class SQLBuilder {
     public void addAnd(String fields) throws SQLException {
         addAnd(fields, ',', '=', '|');
     }
-    public void addAnd(SQLNamedValues values) {
+    public void addAnd(SQLNamedValues values) throws SQLException {
         for (SQLNamedValues.NamedValue value : values.getNamedValues()) {
             addAnd(value.getName(), value.getOperator(), value.getValue(), false); // Value already has quotes applied
         }
     }
-    public void addAndStart(Date start) {
+    public void addAndStart(Date start) throws SQLException {
         if (start != null) {
             addAnd("Start", "<=", start);
             setWhere(
