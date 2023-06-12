@@ -78,11 +78,11 @@ public class Environment {
         return defaultValue;
     }
     public boolean getBooleanValue(String name, boolean ifNull) {
-        String value = getValue(name).trim();
+        String value = getValue(name);
             
-        if (value.equals("")) return ifNull;
+        if (value == null || value.trim().length() == 0) return ifNull;
             
-        value = value.toLowerCase();
+        value = value.trim().toLowerCase();
             
         return value.equals("true") || value.equals("t") || value.equals("yes") || value.equals("y");
     }

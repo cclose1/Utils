@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Properties;
+import java.util.logging.Level;
 import org.cbc.Utils;
 import org.cbc.application.reporting.Report;
 import org.cbc.json.JSONArray;
@@ -30,7 +31,6 @@ import org.cbc.utils.system.Timer;
  * @author CClose
  */
 public class DatabaseSession {
-
     private static String pad(ResultSet rs, int max, int column, String value) throws SQLException {
         int size = rs.getMetaData().getColumnDisplaySize(column);
 
@@ -450,8 +450,7 @@ public class DatabaseSession {
                 col = it.next();
                 
                 if (col.getpKeyPosition() == pKeyPosition) return col;
-            }
-            
+            }            
             throw new SQLException("Table " + name + " not have primary key column at position " + pKeyPosition);       
         }
         public String getName() {
@@ -559,7 +558,15 @@ public class DatabaseSession {
     private char         nextDelim           = ';';
     private double       longStatementTime   = 0;
     private StringBuffer connectString;
-
+    /*
+     * The following was introduced as part of a work around for sql server. After an upgrade all connections via java
+     * code had the status Dedicated Admin Connection (DAC), which meant only one connection was allowed. I've no idea why
+     * this was the case, particulary as creating a DAC is not easy to do. The following is called for every method that
+     * requires a connection.
+     */
+    private void openConnection() throws SQLException {
+        if (connection != null && connection.isClosed()) connect();
+    }
     private static String formatDate(Date dateTime, String format) {
         return new SimpleDateFormat(format).format(dateTime);
     }
@@ -580,7 +587,6 @@ public class DatabaseSession {
         }
         return formatDate(dateTime, format);
     }
-
     public static String getDateString(Date dateTime, String protocol) {
         String format;
 
@@ -675,8 +681,12 @@ public class DatabaseSession {
             switch (protocol) {
                 case "sqlserver":
                     loadDriver(driver, "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+                    /*
+                     * Need to handle the port to allow access to a server that does not use the default port.
+                     */
                     connectString = new StringBuffer("jdbc:sqlserver://" + server + ":1433");
-                    addConnectionProperty("databaseName", database);
+                    addConnectionProperty("databaseName",           database);
+                    addConnectionProperty("trustServerCertificate", "true");
                     break;
                 case "jdbc:odbc":
                     loadDriver(driver, "sun.jdbc.odbc.JdbcOdbcDriver");
@@ -723,9 +733,9 @@ public class DatabaseSession {
     }
 
     public void connect() throws SQLException {
-        connection = DriverManager.getConnection(connectString.toString());
+        connection       = DriverManager.getConnection(connectString.toString());
         defaultIsolation = connection.getTransactionIsolation();
-        version = connection.getMetaData().getDriverVersion();
+        version          = connection.getMetaData().getDriverVersion();
         /*
          * For PostgreSQL change string handling to standard.
          */
@@ -779,24 +789,30 @@ public class DatabaseSession {
     }
 
     public void startTransaction() throws SQLException {
+        openConnection();
         connection.setAutoCommit(false);
     }
 
     public void startTransaction(int isolationLevel) throws SQLException {
+        openConnection();
         connection.setTransactionIsolation(isolationLevel);
         startTransaction();
     }
 
     public void commit() throws SQLException {
+        openConnection();
+        
+        if (connection.getAutoCommit()) return;
+        
         connection.commit();
         connection.setTransactionIsolation(defaultIsolation);
         connection.setAutoCommit(true);
     }
 
     public void rollback() throws SQLException {
-        if (connection.getAutoCommit()) {
-            return;
-        }
+        openConnection();
+        
+        if (connection.getAutoCommit()) return;
 
         connection.rollback();
         connection.setTransactionIsolation(defaultIsolation);
@@ -812,19 +828,25 @@ public class DatabaseSession {
     }
 
     public Connection getConnection() {
+        try {
+            openConnection();
+        } catch (SQLException ex) {
+            java.util.logging.Logger.getLogger(DatabaseSession.class.getName()).log(Level.SEVERE, null, ex);
+        }        
         return connection;
     }
 
     public void close() {
-        if (connection != null) try {
-            connection.close();
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
         } catch (SQLException ex) {
         }
-        connection = null;
     }
 
-    public boolean isOpen() {
-        return connection != null;
+    public boolean isOpen() throws SQLException {
+        return connection != null && !connection.isClosed();
     }
 
     private class StatementWrapper {
@@ -834,6 +856,7 @@ public class DatabaseSession {
         public Statement statement;
 
         StatementWrapper(String sql, Statement statement) throws SQLException {
+            openConnection();
             t.setAutoReset(false);
 
             if (statement == null) {
@@ -918,6 +941,8 @@ public class DatabaseSession {
     }
 
     public ResultSet executeQuery(String sql) throws SQLException {
+        openConnection();
+        
         if (connection == null) {
             return null;
         }
@@ -936,6 +961,8 @@ public class DatabaseSession {
     }
 
     public ResultSet executeQuery(String sql, int setType) throws SQLException {
+        openConnection();
+        
         if (connection == null) {
             return null;
         }
@@ -956,6 +983,8 @@ public class DatabaseSession {
     }
 
     public ResultSet updateQuery(String sql, int setType) throws SQLException {
+        openConnection();
+        
         if (connection == null) {
             return null;
         }
@@ -995,6 +1024,7 @@ public class DatabaseSession {
         synchronized (this) {
             if (querying) {
                 try {
+                    openConnection();
                     reportException = false;
                     connection.close();
                     connect(this.getProtocol(), this.getServer(), this.getDatabase(), this.user, this.password);
@@ -1050,6 +1080,7 @@ public class DatabaseSession {
 
     private String getColumnDefinition(String name, int type, int size, int precision) throws SQLException {
         String typeName = "VARCHAR";
+        openConnection();
         ResultSet types = connection.getMetaData().getTypeInfo();
 
         while (types.next()) {
@@ -1089,10 +1120,12 @@ public class DatabaseSession {
 
     public void createTable(StringBuffer createDDL) throws SQLException {
         createDDL.append(')');
+        openConnection();
         connection.createStatement().execute(createDDL.toString());
     }
 
     public boolean columnExists(String table, String column) throws SQLException {
+        openConnection();
         ResultSet rs = connection.getMetaData().getColumns(null, null, table, column);
         return rs.next();
     }
