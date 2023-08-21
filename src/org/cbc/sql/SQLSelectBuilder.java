@@ -91,6 +91,7 @@ public class SQLSelectBuilder extends SQLBuilder {
         
         return f;
     }
+    @Override
     public void addField(String name) {
         addField(name, null, null, null);
     } 

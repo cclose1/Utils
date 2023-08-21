@@ -20,7 +20,10 @@ import java.util.GregorianCalendar;
 public class Calendar extends GregorianCalendar {
     private static final long serialVersionUID = 1L;
     
-    public Calendar() {
+    public static int daysBetween(Date d1, Date d2){
+        return (int)( (d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    public Calendar() {  
         super();
     }
     public Calendar(long time) {

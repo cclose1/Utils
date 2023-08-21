@@ -190,6 +190,9 @@ public abstract class SQLBuilder {
     public void addField(String name, String value) {
         addField(name, value, true);
     }
+    public void addField(String name) {
+        addField(name, null, true);
+    }
     public void addField(String name, String value, String type) throws ParseException {
         /*
          * Force a null update if value is null or value is empty and type is not a character type.
