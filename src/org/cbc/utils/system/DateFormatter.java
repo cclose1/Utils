@@ -91,6 +91,9 @@ public class DateFormatter {
     public static Date parseDate(String date) throws ParseException {
         return new SimpleDateFormat(getDateFormat(date)).parse(date);
     }
+    public static String format(Date date, String format) {
+        return new SimpleDateFormat(format).format(date);
+    }
     public DateFormatter() {
 
     }
@@ -101,9 +104,6 @@ public class DateFormatter {
         this(format);
         this.useLenient = lenient;
         formatter.setLenient(lenient);
-    }
-    public String format(Date date, String format) {
-        return new SimpleDateFormat(format).format(date);
     }
     public String format(Date date) {
         return formatter.format(date);

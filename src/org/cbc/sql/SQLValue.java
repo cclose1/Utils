@@ -57,7 +57,7 @@ public class SQLValue {
     public boolean getIsFieldName() {
         return isFieldName;
     }
-    public String getValue(String protocol) {
+    public String getUnquotedValue(String protocol) {
         String text = "";
 
         switch (type) {
@@ -74,6 +74,30 @@ public class SQLValue {
                 text = DatabaseSession.getDateTimeString(datValue, protocol);
                 break;
         }
+        return text;   
+    }
+    public String getValueOld(String protocol) {
+        String text = "";
+
+        switch (type) {
+            case Text:
+                text = !isFieldName || txtValue == null ? txtValue : DatabaseSession.delimitName(txtValue, protocol);
+                break;
+            case Double:
+                text = "" + dblValue;
+                break;
+            case Integer:
+                text = "" + intValue;
+                break;
+            case Date:
+                text = DatabaseSession.getDateTimeString(datValue, protocol);
+                break;
+        }
+        return text == null ? null : isQuoted ? '\'' + DatabaseSession.escape(text) + '\'' : text;   
+    }
+    public String getValue(String protocol) {
+        String text = getUnquotedValue(protocol);
+
         return text == null ? null : isQuoted ? '\'' + DatabaseSession.escape(text) + '\'' : text;   
     }
 }

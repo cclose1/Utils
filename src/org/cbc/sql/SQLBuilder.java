@@ -296,6 +296,9 @@ public abstract class SQLBuilder {
     public void addAnd(String field, String operator, String value) throws SQLException {
         addAnd(field, operator, value, true);
     }
+    public void addAnd(String field, String operator, SQLValue value) throws SQLException {
+        addAnd(field, operator, value.getUnquotedValue(protocol), value.getIsQuoted());
+    }
     public void addAnd(String field, String operator, Date value) throws SQLException {
         if (value == null)
             addAnd(field, operator, null, true);

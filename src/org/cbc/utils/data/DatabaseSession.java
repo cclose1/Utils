@@ -439,8 +439,23 @@ public class DatabaseSession {
         public Column getColumn(int index) {
             return columns.get(index);
         }
+        public ArrayList<Column> getColumns() {
+            return columns;
+        }
         public final Column getColumn(String name) throws SQLException {
             return getColumn(toIndex(name));
+        }        
+        public ArrayList<Column> getKeyColumns() {           
+            Iterator<Column>  it = this.iterator();
+            Column            col;
+            ArrayList<Column> cols = new ArrayList<>();
+            
+            while (it.hasNext()) {
+                col = it.next();
+                
+                if (col.getpKeyPosition() > 0) cols.add(col);
+            }            
+            return cols;
         }
         public Column getKeyColumn(int pKeyPosition) throws SQLException {           
             Iterator<Column> it = this.iterator();

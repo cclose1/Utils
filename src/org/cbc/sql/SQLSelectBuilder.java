@@ -32,6 +32,10 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void setMaxRows(int rows) {
         this.maxRows = rows;
     }
+    public void clearOrderBy() {
+        orderBy = null;
+    }
+            
     protected class Cast {
         private String type;
         private int    precision = 0;
