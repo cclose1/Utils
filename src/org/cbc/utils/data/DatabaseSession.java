@@ -315,9 +315,7 @@ public class DatabaseSession {
                     cols = new ArrayList<>();
                     indexes.put(iName, cols);
                 }
-                cols.add(column);
-                Report.comment("", " position " + column.getPosition() + "Index " + iName + " column " + column.getName());
-            }
+                cols.add(column);            }
         }
         return indexes;
     }
@@ -1049,7 +1047,6 @@ public class DatabaseSession {
             }
         }
     }
-
     public void load(ArrayList<ArrayList<String>> data, int maxRows, boolean includeHeadings, ResultSet records) throws SQLException {
         int i = 0;
         ArrayList<String> headings = null;

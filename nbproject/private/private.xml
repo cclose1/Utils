@@ -7,7 +7,9 @@
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/data/DatabaseSession.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLBuilder.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLUpdateBuilder.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/json/JSONObject.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLValue.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLDeleteBuilder.java</file>
         </group>
     </open-files>
 </project-private>
