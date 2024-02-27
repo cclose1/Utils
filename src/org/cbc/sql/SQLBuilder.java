@@ -199,7 +199,7 @@ public abstract class SQLBuilder {
          */
         if (value == null || (value.isEmpty() && !type.equals("VARCHAR") && !type.equals("CHAR"))) type = "NULL";
     
-        switch (type) {
+        switch (type.toUpperCase()) {
             case "NULL":
                 addField(name, "null", false);
                 break;
@@ -209,7 +209,7 @@ public abstract class SQLBuilder {
                 break;
             default:
                 addField(name, value, true);
-        };
+        }
     }
     public void addField(String name, Value value) {
         Field f = new Field(name, value);
@@ -312,7 +312,7 @@ public abstract class SQLBuilder {
         if (value == null || (value.isEmpty() && !type.equals("VARCHAR") && !type.equals("CHAR"))) type = "NULL";
 
         if (value != null && value.trim().length()!= 0) {
-            switch (type) {
+            switch (type.toUpperCase()) {
                 case "NULL":
                     addAnd(field, operator, null, true);
                     break;

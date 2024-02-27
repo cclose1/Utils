@@ -74,7 +74,7 @@ public class Main {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }        
     }
-    public static void testSQLBuilder() throws ParseException {
+    public static void testSQLBuilder() throws ParseException, SQLException {
         DatabaseSession  db  = new DatabaseSession("sqlserver", "127.0.0.1", "Expenditure");
         SQLSelectBuilder sql = new SQLSelectBuilder("", db.getProtocol());
         Date test = (new SimpleDateFormat("H:m:s")).parse("12:34:56");
@@ -150,7 +150,7 @@ LocalDateTime dt = LocalDateTime.parse(date, formatter);
         }
     }
   
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         testDate("01-08-02");
         testDate("2014-08-02");
         testDate("01-08-2002");

@@ -131,7 +131,6 @@ public class DatabaseSession {
             return size - unallocated;
         }
     }
-
     public class Column {
         private String          name;
         private boolean         display;
@@ -318,6 +317,97 @@ public class DatabaseSession {
                 cols.add(column);            }
         }
         return indexes;
+    }    /*
+     * The JDBC driver allows table meta data using matches on catalog, schema and name. However, it appears
+     * that different database use catalog and schema to hold the database name in different ways.
+     * Some set catalog to database and others set schema to database. This contains both allowing the
+     * meta data interfaces to work in either case.
+     */
+    public class TableIdentifier {
+        private String catalog = null;
+        private String schema  = null;
+        private String name    = null;
+        
+        protected TableIdentifier(String catalog, String schema, String name) {
+            this.catalog = catalog;
+            this.schema  = schema;
+            this.name    = name;        
+        }
+        public String getCatalog() {
+            return catalog;
+        }
+        public String getSchema() {
+            return schema;
+        }
+        public String getName() {
+            return name;
+        }
+    }
+    /*
+     * The jdbc metadata interface makes use of the term catalog and schema. It appears that these have different meanings
+     * for any particular database. MySQL does not use schema and catalog is the database name containing the table. For
+     * SQLServer catalog is also set to the database name and schema is set to dbo, presumably you could define other
+     * schema values.
+     *
+     * This uses connection.getCatalog to determine which of getTables catalog and schema fields to use. If it is not null
+     * catalog is set to database and schema is set to null, otherwise, schema is set to database and catalig to null.
+     *
+     * This works for MySQL and SQLServer, but may not work for other database servers.
+     *
+     * database   The database to be searched, if null, all databases are searched.
+     * tableMatch A pattern to be used to select tables. It uses the same pattern definition as the the like clause,
+     *            e.g. %abc% will retrieve all tables that contain abc in the name ignoring case.
+     */
+    private void addTableIds(ArrayList<TableIdentifier> tables, String database, String tableMatch) throws SQLException {
+        boolean useCatalog = connection.getCatalog() != null;
+        
+        ResultSet rs = connection.getMetaData().getTables(useCatalog? database : null, useCatalog? null : database, tableMatch, null);
+            
+        while (rs.next()) {
+            String catalog = rs.getString("TABLE_CAT");
+            String schema  = rs.getString("TABLE_SCHEM");
+            String name    = rs.getString("TABLE_NAME");
+            String type    = rs.getString("TABLE_TYPE");
+            
+            if (!type.equalsIgnoreCase("table")) continue;
+            
+            tables.add(new TableIdentifier(catalog, schema, name));
+        }
+    }
+    /*
+     * Returns an array of TableIdentifiers matching database and nameMatch. 
+     *
+     * database  The database to be searched or null, if all databases are searched.
+     * nameMatch Table name matching pettern. Uses the same pattern specifiers as used by like.
+     *
+     * Only objects of type TABLE are included, i.e. system tables and views are ignored.
+     *
+     * Returns an array of tableIdentifiers, that can be passed to the appropriate TableDefinition constructor.     *         
+     */
+    public ArrayList<TableIdentifier> getTableIdentifiers(String database, String nameMatch) throws SQLException {
+        ArrayList<TableIdentifier> tables = new ArrayList<>();
+        
+        addTableIds(tables, database, nameMatch);
+        
+        return tables;
+    }
+    /*
+     * Same as above except it only returns TableIdentifiers, that are accessible from the DatabaseSession instance.
+     */
+    public ArrayList<TableIdentifier> getTableIdentifiers(String nameMatch) throws SQLException {  
+        return getTableIdentifiers(database, nameMatch);
+    }
+    /*
+     * Returns the TableIdentifier for table name in the connected database.
+     */
+    public TableIdentifier getTableIdentifier(String name) throws SQLException {
+        ArrayList<TableIdentifier> tables = getTableIdentifiers(database, name);
+        
+        if (tables.isEmpty()) throw new SQLException("Table " + name + " does not exist in database " + database);
+        
+        if (tables.size() != 1) throw new SQLException("Table " + name + " not unique in database " + database);
+        
+        return tables.get(0);
     }
     /*
      * Provides information about a table derived from the JDBC metadata methods getColumns and getIndexInfo.
@@ -343,14 +433,6 @@ public class DatabaseSession {
            maxDisplayLabel = 0;
            columns.forEach(col -> updateMaxDisplayLabel(col));
         }
-        private String setTableProperty(ResultSet rs, String property, String name) throws SQLException {
-            String value = rs.getString(name);
-            
-            if (value    == null) return property;            
-            if (property == null || value.equals(property)) return value;
-            
-            throw new SQLException("Property " + name + " changed from " + property + " to " + value);
-        }
         private class ObjectIterator implements Iterator<Column> {
             int count = 0;
 
@@ -358,7 +440,6 @@ public class DatabaseSession {
             public boolean hasNext() {
                 return count < columns.size();
             }
-
             @Override
             public Column next() {
                 if (hasNext()) {
@@ -373,28 +454,22 @@ public class DatabaseSession {
                     return null;
                 }
             }
-
             @Override
             public void remove() {
                 columns.remove(--count);
             }
         }
-
         @Override
         public Iterator<Column> iterator() {
             return new TableDefinition.ObjectIterator();
-        }
-        public TableDefinition(String catalog, String schemaPattern, String name) throws SQLException {
-            this.name = name;
+        }        
+        public TableDefinition(TableIdentifier table) throws SQLException {
+            this.name = table.getName();
             columns   = new ArrayList<>();
             index     = new HashMap<>();
-            indexes   = getTableIndexes(catalog, schemaPattern, name);
-            
-            ResultSet rs = connection.getMetaData().getTables(null, null, name, null);
-            
-            if (!rs.next()) throw new SQLException("Table " + name + " does not exist");
-            
-            rs = connection.getMetaData().getColumns(catalog, schemaPattern, name, "%");
+            indexes   = getTableIndexes(table.getCatalog(), table.getSchema(), this.name);
+                        
+            ResultSet rs = connection.getMetaData().getColumns(table.getCatalog(), table.getSchema(), this.name, "%");
 
             while (rs.next()) {
                 Column column = new Column(rs.getString("COLUMN_NAME"), this);
@@ -409,8 +484,6 @@ public class DatabaseSession {
                 column.setNullable(toBoolean(rs, "IS_NULLABLE", true));
                 columns.add(column);
                 index.put(column.getName().toLowerCase(), columns.size() - 1);
-                catalog = setTableProperty(rs, catalog, "TABLE_CAT");
-                schema  = setTableProperty(rs, schema,  "TABLE_SCHEM");
             }
             ArrayList<Column> pkCols = indexes.get("PRIMARY");
             
@@ -432,7 +505,7 @@ public class DatabaseSession {
             return this.index.get(columnName.toLowerCase());
         }
         public TableDefinition(String name) throws SQLException {
-            this(null, null, name);
+            this(getTableIdentifier(name));
         }
         public Column getColumn(int index) {
             return columns.get(index);
@@ -563,6 +636,8 @@ public class DatabaseSession {
     private boolean      reportException     = true;
     private boolean      querying            = false;
     private Logger       log                 = new Logger();
+    private boolean      autoTransaction     = false;
+    private boolean      transactionStarted  = false;
     private String       protocol            = null;
     private int          updateResultSetType = ResultSet.TYPE_FORWARD_ONLY;
     private int          statementTimeout    = 0;
@@ -634,7 +709,8 @@ public class DatabaseSession {
                     || name.equalsIgnoreCase("database")
                     || name.equalsIgnoreCase("index")
                     || name.equalsIgnoreCase("sent")
-                    || name.equalsIgnoreCase("end")) {
+                    || name.equalsIgnoreCase("end")
+                    || name.equalsIgnoreCase("percent")) {
                 name = '[' + name + ']';
             }
         } else if (protocol.equalsIgnoreCase("mysql")) {
@@ -725,12 +801,24 @@ public class DatabaseSession {
             log.fatalError(ex);
         }
     }
-
+    private void autoStartTransaction(boolean write) throws SQLException {
+        if (!write || connection.getAutoCommit() || transactionStarted) return;
+        /*
+         * It seems that JDBC autmatically starts a transaction autoCommit is false. 
+         *
+         * For now use this in case above is not correct.
+         */
+        transactionStarted = true;
+    }
     public DatabaseSession() {
 
     }
-
-    public DatabaseSession(String protocol, String server, String database) {
+    public DatabaseSession(String protocol, String server, String database, boolean autoTransaction) throws SQLException {
+        startConnectionString(protocol, server, database, null);
+        this.autoTransaction = autoTransaction;
+    }
+    public DatabaseSession(String protocol, String server, String database) throws SQLException {
+        this(protocol, server, database, false);
         startConnectionString(protocol, server, database, null);
     }
 
@@ -749,6 +837,9 @@ public class DatabaseSession {
         connection       = DriverManager.getConnection(connectString.toString());
         defaultIsolation = connection.getTransactionIsolation();
         version          = connection.getMetaData().getDriverVersion();
+        
+        this.connection.setAutoCommit(!autoTransaction);
+        
         /*
          * For PostgreSQL change string handling to standard.
          */
@@ -803,7 +894,6 @@ public class DatabaseSession {
 
     public void startTransaction() throws SQLException {
         openConnection();
-        connection.setAutoCommit(false);
     }
 
     public void startTransaction(int isolationLevel) throws SQLException {
@@ -819,7 +909,6 @@ public class DatabaseSession {
         
         connection.commit();
         connection.setTransactionIsolation(defaultIsolation);
-        connection.setAutoCommit(true);
     }
 
     public void rollback() throws SQLException {
@@ -829,7 +918,6 @@ public class DatabaseSession {
 
         connection.rollback();
         connection.setTransactionIsolation(defaultIsolation);
-        connection.setAutoCommit(true);
     }
 
     public void setStatementTimeout(int seconds) {
@@ -916,6 +1004,7 @@ public class DatabaseSession {
     private ResultSet executeUpdate(String sql, boolean getGeneratedKey) throws SQLException {
         ResultSet rs = null;
         StatementWrapper wr = new StatementWrapper(sql);
+        autoStartTransaction(true);
 
         try {
             wr.statement.executeUpdate(sql, getGeneratedKey ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS);
@@ -932,6 +1021,7 @@ public class DatabaseSession {
     }
     public int executeUpdate(String sql) throws SQLException {
         StatementWrapper wr = new StatementWrapper(sql);
+        autoStartTransaction(true);
         return wr.statement.executeUpdate(sql, Statement.NO_GENERATED_KEYS);
     }
 
@@ -939,6 +1029,8 @@ public class DatabaseSession {
         ResultSet rs = null;
         StatementWrapper wr = new StatementWrapper(sql);
 
+        autoStartTransaction(true);
+        
         try {
             wr.statement.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
 
@@ -963,6 +1055,8 @@ public class DatabaseSession {
         ResultSet results = null;
         StatementWrapper wr = new StatementWrapper(sql);
 
+        autoStartTransaction(true);
+        
         try {
             results = wr.statement.executeQuery(sql);
         } catch (SQLException ex) {
@@ -974,7 +1068,8 @@ public class DatabaseSession {
     }
 
     public ResultSet executeQuery(String sql, int setType) throws SQLException {
-        openConnection();
+        openConnection();        
+        autoStartTransaction(false);
         
         if (connection == null) {
             return null;
@@ -1133,6 +1228,7 @@ public class DatabaseSession {
     public void createTable(StringBuffer createDDL) throws SQLException {
         createDDL.append(')');
         openConnection();
+        autoStartTransaction(true);
         connection.createStatement().execute(createDDL.toString());
     }
 
@@ -1187,6 +1283,8 @@ public class DatabaseSession {
 
         ResultSet db = executeQuery("EXEC sp_spaceused @updateusage = " + (updateUsage ? "true" : "false"));
 
+        autoStartTransaction(false);
+        
         if (db.next()) {
             statistics.name = db.getString("database_name");
             statistics.size = getSize(db.getString("database_size"));

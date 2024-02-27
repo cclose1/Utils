@@ -33,7 +33,7 @@ public class DataFileWriter extends DataOutputStream {
     }
     public void create(String file) throws IOException {
         if (file.indexOf('\'') != -1) {
-            file = fmtDate.format(new Date(), file);
+            file = DateFormatter.format(new Date(), file);
         }
         create(new File(file));
     }
@@ -62,7 +62,7 @@ public class DataFileWriter extends DataOutputStream {
     }
     public void append(String file) throws IOException {
         if (file.indexOf('\'') != -1) {
-            file = fmtDate.format(new Date(), file);
+            file = DateFormatter.format(new Date(), file);
         }
         append(new File(file));
     }
