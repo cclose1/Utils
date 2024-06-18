@@ -118,4 +118,20 @@ public class DateFormatter {
     public Date parse(String date) throws ParseException {
         return formatter.parse(date);
     }
+    public enum TimeUnits {Seconds, Minutes, Hours, Days};
+    public long dateDiff(Date from, Date to, TimeUnits units) {
+        long msDiff = to.getTime() - from.getTime();
+        
+        switch (units) {
+            case Seconds:
+                return msDiff / 1000;
+            case Minutes:
+                return msDiff / 1000 / 60;
+            case Hours:
+                return msDiff / 1000 / 60 / 60;
+            case Days:
+                return msDiff / 1000 / 60 / 60 /24;
+        }
+        return -1;
+    }
 }

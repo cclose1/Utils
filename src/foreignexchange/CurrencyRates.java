@@ -67,7 +67,7 @@ public class CurrencyRates {
     private String fmtTime(Date timestamp) {
         DateFormatter fmt = new DateFormatter();
         
-        return fmt.format(timestamp, "dd-MMM-yy HH:mm:ss");
+        return DateFormatter.format(timestamp, "dd-MMM-yy HH:mm:ss");
     }
     protected class Error implements ErrorHandler {
         int     errors     = 0;

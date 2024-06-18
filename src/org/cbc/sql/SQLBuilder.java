@@ -479,19 +479,17 @@ public abstract class SQLBuilder {
             }
         }
         public String get() {
-            DateFormatter df = new DateFormatter();
-            
             if (isNull) return "NULL";
             
             switch (type) {
                 case java.sql.Types.VARCHAR:
                     return '\'' + sValue + '\'';
                 case java.sql.Types.DATE:
-                    return '\'' + df.format(dValue, "yyyy-MM-dd") + '\'';
+                    return '\'' + DateFormatter.format(dValue, "yyyy-MM-dd") + '\'';
                 case java.sql.Types.TIME:
-                    return '\'' + df.format(dValue, "HH:mm:ss") + '\'';
+                    return '\'' + DateFormatter.format(dValue, "HH:mm:ss") + '\'';
                 case java.sql.Types.TIMESTAMP: {
-                    String ts = df.format(dValue, "yyyy-MM-dd HH:mm:ss");
+                    String ts = DateFormatter.format(dValue, "yyyy-MM-dd HH:mm:ss");
                     
                     if (dValue.getNanos() != 0) {
                         String [] fr = Double.toString(dValue.getNanos() / 1000000.0).split("\\.");

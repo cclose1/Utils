@@ -27,4 +27,9 @@ public class Utils {
     public static String splitToWords(String source) {
         return splitToWords(source, " ");
     }
+    public static double round(double value, int places) {
+        int mult = (int)Math.pow(10, places);
+        
+        return Math.round(value * mult) / (1.0* mult);        
+    }
 }

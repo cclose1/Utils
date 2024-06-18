@@ -7,6 +7,7 @@ package org.cbc.utils.system;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
@@ -19,16 +20,16 @@ public class HighResolutionTime {
     private Date timestamp = null;
     
     public HighResolutionTime(String s) {
-        XMLGregorianCalendar xmlCalendar = null;
-        GregorianCalendar calendar = null;
+        XMLGregorianCalendar xmlCalendar;
+        GregorianCalendar    calendar;
         
-        if (s == null || s.indexOf("0001-01-01T00:00:00") > -1) {
+        if (s == null || s.contains("0001-01-01T00:00:00")) {
             return;
         }
         try {
-            xmlCalendar = DatatypeFactory.newInstance().newXMLGregorianCalendar(s);
-            calendar = xmlCalendar.toGregorianCalendar();
-            timestamp = calendar.getTime();
+            xmlCalendar  = DatatypeFactory.newInstance().newXMLGregorianCalendar(s);
+            calendar     = xmlCalendar.toGregorianCalendar();
+            timestamp    = calendar.getTime();
             milliSeconds = (double) timestamp.getTime();
             
             /*
@@ -41,10 +42,10 @@ public class HighResolutionTime {
                 if (i != -1) {
                     milliSeconds += Double.parseDouble(s.substring(i + 4, i + 8)) / 10000;
                 }                
-            } catch (Exception ef) {
+            } catch (NumberFormatException ef) {
                 
             }
-        } catch (Exception ex) {
+        } catch (DatatypeConfigurationException ex) {
             System.err.println("Cannot instantiate XML date time parser.");
         }
     }

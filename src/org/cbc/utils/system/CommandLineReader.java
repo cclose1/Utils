@@ -378,12 +378,18 @@ public class CommandLineReader {
                     p.addSeparatorUsage(usage);
             }
         }
+        /*
+         * Not sure why the following is required. It requires that at least one parameter is present. Although
+         * things seem to work OK, if there are only optional parameters and none specified. For now comment it
+         * out.
+        
         if (args.length == 0) {
             if (version != null) log.comment("Version " + version);
 
             log.comment(usage.toString());
             System.exit(0);
         }
+        */
         while ((arg = arguments.next()) != null) {
             if (arg.isOption) {
                 int i = getParameterIndex(arg.value, false);

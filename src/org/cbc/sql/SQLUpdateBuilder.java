@@ -18,6 +18,9 @@ public class SQLUpdateBuilder extends SQLBuilder {
     public void addIncrementField(String name, int increment) {
         addField(name, name + (increment < 0? '-' : '+') + increment, false);
     }
+    public void addIncrementField(String name, double increment) {
+        addField(name, name + '+' + increment, false);
+    }
     @Override
     public String build() {
         StringBuilder sql = new StringBuilder("UPDATE " + table + "\r\n SET");
