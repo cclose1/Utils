@@ -118,8 +118,9 @@ public class DateFormatter {
     public Date parse(String date) throws ParseException {
         return formatter.parse(date);
     }
-    public enum TimeUnits {Seconds, Minutes, Hours, Days};
-    public long dateDiff(Date from, Date to, TimeUnits units) {
+    public static enum TimeUnits {Seconds, Minutes, Hours, Days};
+    
+    public static long dateDiff(Date from, Date to, TimeUnits units) {
         long msDiff = to.getTime() - from.getTime();
         
         switch (units) {

@@ -204,6 +204,7 @@ public abstract class SQLBuilder {
                 addField(name, "null", false);
                 break;
             case "DATETIME":
+            case "TIMESTAMP":
             case "DATE":
                 addField(name, DateFormatter.parseDate(value));
                 break;
@@ -317,6 +318,7 @@ public abstract class SQLBuilder {
                     addAnd(field, operator, null, true);
                     break;
                 case "DATETIME":
+                case "TIMESTAMP":
                 case "DATE":
                     addAnd(field, operator, DateFormatter.parseDate(value));
                     break;

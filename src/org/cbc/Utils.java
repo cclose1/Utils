@@ -4,12 +4,26 @@
  */
 package org.cbc;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+
 /**
  *
  * @author cclose
  */
 public class Utils {
     
+    public static String format(float value, int places) {
+        String fs = "##0.";
+        
+        while (places > 0) {
+            fs += '0';
+            places--;
+        }
+        NumberFormat f = new DecimalFormat(fs);
+        
+        return f.format((double)value);
+    }
     public static String splitToWords(String source, String separator) {
         StringBuilder split = new StringBuilder();
         char          ch;

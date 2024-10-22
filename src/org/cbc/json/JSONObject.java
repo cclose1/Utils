@@ -254,10 +254,11 @@ public class JSONObject implements Iterable<JSONNameValue>{
             JSONObject        col;
             
             col = row.addObject();
-            col.add("Name",      new JSONValue(field));
-            col.add("Type",      new JSONValue(md.getColumnTypeName(i).toLowerCase()));
-            col.add("Scale",     new JSONValue(md.getScale(i)));
-            col.add("Precision", new JSONValue(md.getPrecision(i)));
+            col.add("Name",        new JSONValue(field));
+            col.add("Type",        new JSONValue(md.getColumnTypeName(i).toLowerCase()));
+            col.add("Scale",       new JSONValue(md.getScale(i)));
+            col.add("Precision",   new JSONValue(md.getPrecision(i)));
+            col.add("Nullability", new JSONValue(md.isNullable(count)));
             
             if (optional != null) {
                 optional.present = true;

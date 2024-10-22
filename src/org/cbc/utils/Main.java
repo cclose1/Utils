@@ -75,7 +75,7 @@ public class Main {
         }        
     }
     public static void testSQLBuilder() throws ParseException, SQLException {
-        DatabaseSession  db  = new DatabaseSession("sqlserver", "127.0.0.1", "Expenditure");
+        DatabaseSession  db  = new DatabaseSession("mysql", "127.0.0.1", "Expenditure");
         SQLSelectBuilder sql = new SQLSelectBuilder("", db.getProtocol());
         Date test = (new SimpleDateFormat("H:m:s")).parse("12:34:56");
 
@@ -137,11 +137,8 @@ public class Main {
     private static void testDate(String date, String format) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
         
-
-        DateFormatter fm = new DateFormatter(format);
         try {
-            
-LocalDateTime dt = LocalDateTime.parse(date, formatter);
+            LocalDateTime dt = LocalDateTime.parse(date, formatter);
 
             Object d = formatter.parse(date);
             Report.comment(null, d.toString());
