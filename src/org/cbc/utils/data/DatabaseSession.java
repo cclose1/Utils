@@ -465,6 +465,7 @@ public class DatabaseSession {
         }        
         public TableDefinition(TableIdentifier table) throws SQLException {
             this.name = table.getName();
+            
             columns   = new ArrayList<>();
             index     = new HashMap<>();
             indexes   = getTableIndexes(table.getCatalog(), table.getSchema(), this.name);
@@ -506,6 +507,7 @@ public class DatabaseSession {
         }
         public TableDefinition(String name) throws SQLException {
             this(getTableIdentifier(name));
+            this.displayName = Utils.splitToWords(name);
         }
         public Column getColumn(int index) {
             return columns.get(index);
