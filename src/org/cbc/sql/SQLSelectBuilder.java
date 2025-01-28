@@ -35,7 +35,12 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void clearOrderBy() {
         orderBy = null;
     }
-            
+    @Override
+    public void clear() {
+        super.clear();
+        clearOrderBy();
+        maxRows = -1;
+    }            
     protected class Cast {
         private String type;
         private int    precision = 0;

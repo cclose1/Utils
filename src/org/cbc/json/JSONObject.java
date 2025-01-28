@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
+import org.cbc.Utils;
 
 /**
  * Contains a JSON object. The JSON object is a collection of pairs of name and value. The name is a String and the value
@@ -116,6 +117,9 @@ public class JSONObject implements Iterable<JSONNameValue>{
     }
     public void add(String name, double value) throws JSONException {
         add(name, new JSONValue(value));
+    }
+    public void add(String name, double value, int places) throws JSONException {
+        add(name, new JSONValue(Utils.round(value, places)));
     }
     public void update(String name, JSONValue value) throws JSONException {
         if (!members.containsKey(name)) throw new JSONException("Member " + name + " does not exists");
