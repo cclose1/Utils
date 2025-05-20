@@ -119,7 +119,7 @@ public class JSONObject implements Iterable<JSONNameValue>{
         add(name, new JSONValue(value));
     }
     public void add(String name, double value, int places) throws JSONException {
-        add(name, new JSONValue(Utils.round(value, places)));
+        add(name, new JSONValue(Utils.format(value, places)));
     }
     public void update(String name, JSONValue value) throws JSONException {
         if (!members.containsKey(name)) throw new JSONException("Member " + name + " does not exists");

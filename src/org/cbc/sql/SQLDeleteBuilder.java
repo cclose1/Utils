@@ -6,6 +6,8 @@
 
 package org.cbc.sql;
 
+import java.sql.SQLException;
+
 /**
  *
  * @author Chris
@@ -16,8 +18,10 @@ public class SQLDeleteBuilder extends SQLBuilder {
         this.protocol = protocol;
     }
     @Override
-    public String build() {
+    public String build() throws SQLException {
         StringBuilder sql = new StringBuilder("DELETE FROM " + table + " ");
+        
+        if (where == null) throw new SQLException("No where clause for DELETE FROM " + table);
         addWhere(sql);
         
         return sql.toString();

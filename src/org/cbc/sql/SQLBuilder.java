@@ -376,7 +376,7 @@ public abstract class SQLBuilder {
         if (start != null) {
             addAnd("Start", "<=", start);
             setWhere(
-                " AND (" + delimitName("End") + " >= '" + getTimestamp(start) +
+                " AND (" + delimitName("End") + " > '" + getTimestamp(start) +
                 "' OR "  + delimitName("End") + " IS NULL)");
         }
     }
@@ -392,7 +392,7 @@ public abstract class SQLBuilder {
         uses.clear();
         where = null;
     }
-    public abstract String build();
+    public abstract String build() throws SQLException;
     
     private class ParameterValue {
         int       type   = java.sql.Types.VARCHAR;

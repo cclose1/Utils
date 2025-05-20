@@ -75,7 +75,7 @@ public class Utils {
      * Sets the time part of date to 00:00:00.
      */
     public static void zeroTime(Date date) {
-        date.setTime(1000 * SECS_IN_DAY * (date.getTime() / 1000 / 24 / 60 / 60));
+        date.setTime(1000 * SECS_IN_DAY * (date.getTime() / (1000 * SECS_IN_DAY)));
     }
     public static void setTime(Date date, String time) throws ParseException {
         zeroTime(date);
@@ -86,5 +86,27 @@ public class Utils {
     }
     public static void addDays(Date date, int days) {
         addSeconds(date, 24 * 60 * 60 * days);
+    }
+    /*
+     * Returns value as string formatted by DecimalNumber format.
+     */
+    public static String format(double value, String format) {
+        DecimalFormat df = new DecimalFormat(format);
+
+        return df.format(value);
+    }
+    /* 
+     * Rounds value to places decimal precision and returns it formatted by "0.n0" where n0 is replaced by places 0's.
+     * e.g if places is 2 format string is "0.00".
+     */
+    public static String format(double value, int places) {
+        String fmt = places == 0? "0" : "0.";
+        value = Utils.round(value, places);
+        
+        while (places > 0) {
+            fmt += "0";
+            places--;
+        }
+        return format(value, fmt);
     }
 }
