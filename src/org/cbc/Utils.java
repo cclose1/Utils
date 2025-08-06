@@ -109,4 +109,44 @@ public class Utils {
         }
         return format(value, fmt);
     }
+    public static String lpad(String text, int size) {
+        while (text.length() < size) text = ' ' + text;
+        
+        return text;
+    }
+    public static String rpad(String text, int size) {
+        while (text.length() < size) text += ' ';
+        
+        return text;
+    }
+    /*
+     * This a workaround for dates that can be java.sql.Timesatamp or java.Util.Date.
+     *
+     * The standard date comparison operators may note, e.g. a.equals(b) can return false
+     * when in fact they are equal.
+     *
+     * java.Util.Date is known to be problematic and java.Util.Time should be used.
+     */
+    public static boolean compare(Date a, String test, Date b) throws ParseException {
+        long at = a.getTime();
+        long bt = b.getTime();
+
+        switch (test) {
+            case "=":
+                return at == bt;
+            case "<=":
+                return at <= bt;
+            case "<":
+                return at < bt;
+            case ">=":
+                return at >= bt;
+            case ">":
+                return at > bt;
+            case "!=":
+            case "<>":
+                return at != bt;
+            default:
+                throw new ParseException("Comparison operator " + test + " not supported", 0);
+        }
+    }
 }
