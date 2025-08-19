@@ -254,8 +254,15 @@ public abstract class SQLBuilder {
         
         where.append(clause);        
     }
+    /*
+     * The field is field name that is in the select list and could be an alias for a calculated field. The calculated
+     * value will by default be tested against value.
+     *
+     * However, sometimes it may be required to retrieve on a table field directly.
+     * This can be done by starting field with the ! character
+     */
     public void addAnd(String field, String operator, String value, boolean quoted) throws SQLException {
-        String source = getSource(field);
+        String source = field.startsWith("!")? field.substring(1) : getSource(field);
         
         if (where == null) where = new StringBuilder();
         

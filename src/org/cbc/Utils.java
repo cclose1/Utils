@@ -52,12 +52,29 @@ public class Utils {
     /*
      * Time is of the hh[:mm:[ss]].
      */
+    @SuppressWarnings("fallthrough")
     public static int toSeconds(String time) throws ParseException {
-        String fields[] = time.split(":");
+        String fields[];
         int    seconds  = 0;
         int    mult     = 60 * 60;
         int    maxField = 23;
+        int    sign     = 1;
 
+        time = time.trim();
+        
+        if (time.length() > 0) {
+            char s = time.charAt(0);
+            
+            switch (s) {
+                case '-':
+                    sign = -1;
+                case '+':
+                    time = time.substring(1);
+                    break;
+            }
+        }
+        fields = time.split(":");
+        
         if (fields.length > 3) throw new ParseException("On " + time + " too many fields", fields.length);
         
         for (String field : fields) {
@@ -69,7 +86,7 @@ public class Utils {
             seconds += mult * d;
             mult     = mult / 60;
         }
-        return seconds;
+        return sign * seconds;
     }
     /*
      * Sets the time part of date to 00:00:00.

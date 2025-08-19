@@ -20,6 +20,7 @@ public class SQLSelectBuilder extends SQLBuilder {
     private String options = null;
     private String from    = null;
     private String orderBy = null;
+    private String groupBy = null;
     private int    maxRows = -1;
     
     public SQLSelectBuilder(String table, String protocol) {
@@ -150,6 +151,14 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void setOrderBy(String orderBy) {
         this.orderBy = orderBy;
     }
+    public void addGroupByField(String name) {
+        if (groupBy == null)
+            groupBy = "";
+        else
+            groupBy += ", ";  
+        
+        groupBy += delimitName(name);
+    }
     @Override
     public String build() {
         StringBuilder sql = new StringBuilder("SELECT ");
@@ -191,7 +200,8 @@ public class SQLSelectBuilder extends SQLBuilder {
             }
         }
         addClause(sql, "FROM", from == null? table : from);
-        addWhere(sql);       
+        addWhere(sql);          
+        addClause(sql, "GROUP BY", groupBy);
         addClause(sql, "ORDER BY", orderBy);
         
         if (maxRows > 0 && !protocol.equalsIgnoreCase("sqlserver")) {
