@@ -1,0 +1,16 @@
+<component name="libraryTable">
+  <library name="lib">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/dist/lib/httpclient-4.5.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dist/lib/htmllexer-2.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dist/lib/commons-codec-1.9.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dist/lib/java-unrar-0.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dist/lib/Reporting.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dist/lib/httpcore-4.4.4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dist/lib/commons-logging-1.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dist/lib/mysql-connector-java-8.0.30.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
