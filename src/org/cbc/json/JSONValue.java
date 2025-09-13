@@ -8,9 +8,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.StringReader;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.util.Date;
+import org.cbc.utils.system.DateFormatter;
+import org.cbc.utils.system.TimeWithDate;
 
 /**
  * This class represents a JSON value. Each value has a JSONType and the class has methods appropriate for each type. If a
@@ -23,7 +26,6 @@ public class JSONValue {
     private JSONObject object = null;
     private JSONArray  array  = null;
     private String     value  = null;
-    
     /*
      * Adds field to buffer escaping control characters/
      */
@@ -108,6 +110,17 @@ public class JSONValue {
      */
     public JSONValue(String value) {
         storeString(value);
+    }
+    /**
+     * Creates a value of type type, or JSONType.Null if value is null.
+     * 
+     * @param value
+     * @param type  The json type if value is not the null string.
+     */
+    public JSONValue(String value, JSONType type) {
+        storeString(value);
+        
+        if (value != null) this.type = type;
     }
     /**
      * Creates a value of type JSONType.Number.
@@ -215,27 +228,49 @@ public class JSONValue {
         this(value, isQuoted, true);
     }
     /**
-     * Appends the value as a string to buffer formatted as defined by format.
      * 
-     * @param buffer Append target
-     * 
-     * @param format
+     * @param rs
+     * @param i
+     * @param dbOptions 
      */
-    public static JSONValue getJSONValue(ResultSet rs, int i, boolean fractionalSeconds) throws SQLException {
-        String value = rs.getString(i);   
-        String type  = rs.getMetaData().getColumnTypeName(i).toLowerCase();
+    public JSONValue(JSONObject.DBRow row, JSONObject.DBOptions dbOptions) throws SQLException, ParseException { 
+        JSONValue  ret;
         
-        if (value == null)          return new JSONValue(value);
-        if (type.equals("int"))     return new JSONValue(rs.getInt(i));
-        if (type.equals("decimal")) return new JSONValue(rs.getDouble(i), rs.getMetaData().getScale(i));
-        if (!fractionalSeconds && (type.equals("datetime") || type.equals("time"))) {
-            String flds[] = value.split("\\.", 2);
+        String dbType  = row.getType();
+        String dbValue = row.getValue();
+        
+        if (dbValue != null && dbOptions.stripFractionalSeconds && (dbType.equals("datetime") || dbType.equals("time"))) {
+            String flds[] = dbValue.split("\\.", 2);
             
-            return new JSONValue(flds[0]);
-        } 
+            dbValue = flds[0];
+        }
+        if (dbValue != null & dbType.equals("datetime") && dbOptions.toLocalTime) {
+            /*
+             * This is a timestamp in GMT and has to be converted to local time.
+             */
+            Date ts = DateFormatter.parseDate(dbValue);
+            
+            TimeWithDate td = new TimeWithDate("Europe/London");
+
+            dbValue = DateFormatter.format(td.toLocal(ts), "yyyy-MM-dd HH:mm:ss");
+        }
+        if (dbValue == null) 
+            ret = new JSONValue(dbValue);
+        else if (dbType.equals("int"))
+            ret = new JSONValue(dbValue, JSONType.Number);
+        else if (dbType.equals("decimal")) 
+            ret = new JSONValue(dbValue, JSONType.Number);
         else
-            return new JSONValue(value.trim());
+            ret = new JSONValue(dbValue);  
+        
+        this.type   = ret.type;
+        this.array  = ret.array;
+        this.object = ret.object;
+        this.value  = ret.value;        
     }
+    /*
+     * Remove this
+    */
     public void append(StringBuilder buffer, JSONFormat format, String nullOverride) {
         switch (getType()) {
             case Object:
@@ -301,7 +336,7 @@ public class JSONValue {
     public boolean getBoolean() throws JSONException {
         if (type != JSONType.Boolean) throw new JSONException(this, "Type is " + type + ". getBoolean requires type " + JSONType.Boolean);
         
-        return Boolean.valueOf(value);
+        return Boolean.parseBoolean(value);
     }
     /**
      * @return the object for the value.

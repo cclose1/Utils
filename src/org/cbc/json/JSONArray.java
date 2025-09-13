@@ -6,6 +6,7 @@ package org.cbc.json;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,7 +20,7 @@ import java.util.Iterator;
  * The class methods are not synchronised and object can be corrupted if it is accessed concurrently. 
  */
 public class JSONArray implements Iterable<JSONValue> {
-    ArrayList<JSONValue> array = new ArrayList<JSONValue>();
+    ArrayList<JSONValue> array = new ArrayList<>();
 
     private class ArrayIterator implements Iterator<JSONValue> {
         int     count     = 0;
@@ -162,34 +163,21 @@ public class JSONArray implements Iterable<JSONValue> {
      * </ul>
      * @param rs Result set containing fields.
      */
-    public void addFields(ResultSet rs, String optionalColumns, boolean fractionalSeconds) throws SQLException, JSONException {
-        class Field {
-            boolean present = false;
-        }
-        HashMap<String, Field> fields = new HashMap<String, Field>();
-        
-        if (optionalColumns != null) {
-            for (String f : optionalColumns.split(",")) fields.put(f, new Field());
-        }        
-        if (rs.next()) {
-            int count = rs.getMetaData().getColumnCount();
+    private void addFields(ResultSet rs, JSONObject.DBOptions dbOptions) throws SQLException, JSONException, ParseException {        
+        JSONObject.DBRow dbRow = new JSONObject.DBRow(rs);
+             
+        if (dbRow.nextRow()) {
+            for (int i = 1; i <= dbRow.getColumnCount(); i++) {
+                JSONObject field = addObject();
 
-            for (int i = 1; i <= count; i++) {
-                JSONObject field    = addObject();
-                String     name     = rs.getMetaData().getColumnLabel(i);
-                String     type     = rs.getMetaData().getColumnTypeName(i).toLowerCase();
-                Field      optional = fields.get(name);
-
-                field.add("Name",      new JSONValue(name));
-                field.add("Type",      new JSONValue(type));
-                field.add("Precision", new JSONValue(rs.getMetaData().getPrecision(i)));
-                field.add("Scale",     new JSONValue(type.contains("money") ? 2 : rs.getMetaData().getScale(i)));
-                field.add("Value",     JSONValue.getJSONValue(rs, i, fractionalSeconds));
+                dbRow.setColumn(i);
+                field.add("Name",      new JSONValue(dbRow.getName()));
+                field.add("Type",      new JSONValue(dbRow.getType()));
+                field.add("Precision", new JSONValue(dbRow.getPrecision()));
+                field.add("Scale",     new JSONValue(dbRow.getType().contains("money") ? 2 : dbRow.getScale()));
+                field.add("Value",     new JSONValue(dbRow, dbOptions));
                 
-                if (optional != null) {
-                    optional.present = true;
-                    field.add("Optional", new JSONValue(true));
-                }
+                if (dbOptions.isOptional(dbRow.getName())) field.add("Optional", new JSONValue(true));
             }
         }
         if (rs.next()) throw new JSONException("Result set conains more than one row");
@@ -211,8 +199,12 @@ public class JSONArray implements Iterable<JSONValue> {
      * </ul>
      * @param rs Result set containing fields.
      */
-    public void addFields(ResultSet rs) throws SQLException, JSONException {
-        addFields(rs, null, false);
+    private void addFields(ResultSet rs, boolean toLocalTime) throws SQLException, JSONException, ParseException {
+        JSONObject.DBOptions dbOpts = new JSONObject.DBOptions(toLocalTime);
+        addFields(rs, dbOpts);
+    }
+    public void addFields(ResultSet rs) throws SQLException, JSONException, ParseException {
+        addFields(rs, false);
     }
     /**
      * Appends the array as a string to buffer.

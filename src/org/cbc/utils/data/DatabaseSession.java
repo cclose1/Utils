@@ -712,11 +712,12 @@ public class DatabaseSession {
                     || name.equalsIgnoreCase("index")
                     || name.equalsIgnoreCase("sent")
                     || name.equalsIgnoreCase("end")
-                    || name.equalsIgnoreCase("percent")) {
+                    || name.equalsIgnoreCase("percent")
+                    || name.indexOf('%') != -1) {
                 name = '[' + name + ']';
             }
         } else if (protocol.equalsIgnoreCase("mysql")) {
-            if (name.equalsIgnoreCase("usage")) {
+            if (name.equalsIgnoreCase("usage") || name.indexOf('%') != -1) {
                 name = '`' + name + '`';
             }
         }

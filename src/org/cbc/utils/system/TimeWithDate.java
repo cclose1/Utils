@@ -34,7 +34,7 @@ public class TimeWithDate {
 
         if (offsetTime.getOffset().getTotalSeconds() != 0) {
             /*
-                 * Correct instant so that it is true GMT time rather timestamp assumed to be GMT
+             * Correct instant so that it is true GMT time rather timestamp assumed to be GMT
              */
             instant = instant.minusSeconds(offsetTime.getOffset().getTotalSeconds());
             offsetTime = OffsetTime.ofInstant(instant, zoneId);

@@ -5,8 +5,8 @@
 package org.cbc.json;
 
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,9 +27,90 @@ import org.cbc.Utils;
  * Note: InsertOrdered objects are a bit more costly in terms of memory and speed and by default objects are not insert ordered.
  */
 public class JSONObject implements Iterable<JSONNameValue>{
-    private HashMap<String, JSONValue> members = new HashMap<String, JSONValue>();
+    private HashMap<String, JSONValue> members = new HashMap<>();
     private ArrayList<String>          order;
-  
+    
+    public static class DBOptions {
+        private String optCols[]               = new String[0];
+        public  boolean stripFractionalSeconds = true;
+        public  boolean toLocalTime            = false;
+        
+        public DBOptions() {            
+        }
+        public DBOptions(String optionalColumns, boolean toLocalTime, boolean stripFractionalSeconds) {
+            if (optionalColumns != null) {
+                optCols = optionalColumns.split(",");
+            } else {
+                optCols = new String[0];
+            }
+            this.toLocalTime            = toLocalTime;
+            this.stripFractionalSeconds = stripFractionalSeconds;
+        }        
+        public DBOptions(String optionalColumns) {
+            this(optionalColumns, false, true);
+        }       
+        public DBOptions(boolean toLocalTime) {
+            this("", toLocalTime, false);
+        }
+        public boolean isOptional(String column) {
+            for (String s: optCols) {
+                if (s.equals(column)) return true;
+            }
+            return false;
+        }        
+    }
+    /*
+     * A wrapper for a Result set allowing access the column values in a row and the associated meta data.
+     *
+     * The user of this class provides the result set and the column number of the target. These can be retrieved
+     * although it should not be necessary as the user should have the result set and know the last column accessed. 
+     * However, this class can be passed to another method, thus providing it with these parameters.
+     *
+     * It may better to define this class in DatabaseSession and make non static so that it can access the 
+     * DatabaseSession data.
+     */
+    public static class DBRow {
+        private ResultSet rs     = null;
+        private int       column;
+        
+        public DBRow(ResultSet rs) {
+            this.rs     = rs;
+            this.column = -1;
+        }
+        public boolean nextRow() throws SQLException {
+            return this.rs.next();
+        }
+        public ResultSet getResult() {
+            return this.rs;
+        }
+        public int getColumnCount() throws SQLException {
+            return rs.getMetaData().getColumnCount();
+        }
+        public void setColumn(int column) {
+            this.column = column;
+        }
+        public int getColumn() {
+            return this.column;
+        }
+        public String getName() throws SQLException {
+            return rs.getMetaData().getColumnLabel(column);
+        }
+        public String getType() throws SQLException {
+            return rs.getMetaData().getColumnTypeName(column).toLowerCase();
+        }
+        public String getValue() throws SQLException {
+            return rs.getString(column);
+        }
+        public int getPrecision() throws SQLException {
+            return rs.getMetaData().getPrecision(column);
+        }
+        public int getScale() throws SQLException {
+            return rs.getMetaData().getScale(column);
+        }
+        public int getIsNullable() throws SQLException {
+            return rs.getMetaData().isNullable(column);
+        }
+    }
     private class ObjectIterator implements Iterator<JSONNameValue> {
         int              count    = 0;
         String           lastKey  = null;
@@ -74,6 +155,7 @@ public class JSONObject implements Iterable<JSONNameValue>{
             lastKey = null;
         }
     }
+    @Override
     public Iterator<JSONNameValue> iterator() {
         return new JSONObject.ObjectIterator();
     }
@@ -235,57 +317,45 @@ public class JSONObject implements Iterable<JSONNameValue>{
     public String toString() {
         return toString(new JSONFormat(), null);
     }
-    public void add(String name, ResultSet rs, String optionalColumns, boolean fractionalSeconds) throws SQLException, JSONException {
-        class Field {
-            boolean present = false;
-        }
-        HashMap<String, Field> fields = new HashMap<String, Field>();
-        
-        if (optionalColumns != null) {
-            for (String f : optionalColumns.split(",")) fields.put(f, new Field());
-        }        
+    private void add(String name, ResultSet rs, JSONObject.DBOptions dbOptions) throws SQLException, JSONException, ParseException {
         JSONArray row;
-        
+        DBRow dbRow = new DBRow(rs);
         int count = rs.getMetaData().getColumnCount();
         
         this.add("Table", new JSONValue(name));
         row = this.add("Header", (JSONArray)null);
 
-        for (int i = 1; i <= count; i++) {
-            ResultSetMetaData md       = rs.getMetaData();
-            String            field    = md.getColumnLabel(i);
-            Field             optional = fields.get(field);
-            JSONObject        col;
+        for (int i = 1; i <=  dbRow.getColumnCount(); i++) {
+            JSONObject col;
             
+            dbRow.setColumn(i);
             col = row.addObject();
-            col.add("Name",        new JSONValue(field));
-            col.add("Type",        new JSONValue(md.getColumnTypeName(i).toLowerCase()));
-            col.add("Scale",       new JSONValue(md.getScale(i)));
-            col.add("Precision",   new JSONValue(md.getPrecision(i)));
-            col.add("Nullability", new JSONValue(md.isNullable(count)));
+            col.add("Name",        new JSONValue(dbRow.getName()));
+            col.add("Type",        new JSONValue(dbRow.getType()));
+            col.add("Scale",       new JSONValue(dbRow.getScale()));
+            col.add("Precision",   new JSONValue(dbRow.getPrecision()));
+            col.add("Nullability", new JSONValue(dbRow.getIsNullable()));
             
-            if (optional != null) {
-                optional.present = true;
-                col.add("Optional", new JSONValue(true));
-            }
+            if (dbOptions.isOptional(dbRow.getName())) col.add("Optional", new JSONValue(true));
         }
         row = this.add("Data", (JSONArray)null);
         
-        while (rs.next()) {
+        while (dbRow.nextRow()) {
             JSONArray col = row.addArray();
             
-            for (int i = 1; i <= count; i++) {                
-                col.add(JSONValue.getJSONValue(rs, i, fractionalSeconds));
+            for (int i = 1; i <= count; i++) {
+                dbRow.setColumn(i);
+                col.add(new JSONValue(dbRow, dbOptions));
             }
         }
     }
-    public void add(String name, ResultSet rs, String optionalColumns) throws SQLException, JSONException {
-        add(name, rs, optionalColumns, false);
+    public void add(String name, ResultSet rs, String optionalColumns) throws SQLException, JSONException, ParseException {
+        add(name, rs, new DBOptions(optionalColumns));
     }
-    public void add(String name, ResultSet rs, boolean fractionalSeconds) throws SQLException, JSONException {
-        add(name, rs, null, fractionalSeconds);
-    }    
-    public void add(String name, ResultSet rs) throws SQLException, JSONException {
-        add(name, rs, null, false);
+    public void add(String name, ResultSet rs, boolean toLocalTime) throws SQLException, JSONException, ParseException {
+        add(name, rs, new DBOptions(toLocalTime));
     }
+    public void add(String name, ResultSet rs) throws SQLException, JSONException, ParseException {
+        add(name, rs, new DBOptions());
+    } 
 }
