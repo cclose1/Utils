@@ -717,7 +717,9 @@ public class DatabaseSession {
                 name = '[' + name + ']';
             }
         } else if (protocol.equalsIgnoreCase("mysql")) {
-            if (name.equalsIgnoreCase("usage") || name.indexOf('%') != -1) {
+            if (name.equalsIgnoreCase("usage")
+                    || name.equalsIgnoreCase("database")
+                    || name.indexOf('%') != -1) {
                 name = '`' + name + '`';
             }
         }

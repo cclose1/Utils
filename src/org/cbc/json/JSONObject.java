@@ -92,6 +92,9 @@ public class JSONObject implements Iterable<JSONNameValue>{
         public int getColumn() {
             return this.column;
         }
+        public String getTableName() throws SQLException {
+            return rs.getMetaData().getTableName(1);
+        }
         public String getName() throws SQLException {
             return rs.getMetaData().getColumnLabel(column);
         }
