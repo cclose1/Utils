@@ -13,6 +13,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import static java.nio.file.StandardCopyOption.*;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
@@ -139,6 +144,9 @@ public class FileTransfer {
         public boolean accept(File pathname) {
             return accept(pathname.getName(), pathname.lastModified(), pathname.isDirectory());
         }
+        public boolean accept(FileReader.FileName file) {
+            return accept(file.getName(), file.time, file.isDirectory());
+        }
         public void setSince(Date since) {
             this.since = since;
         }
@@ -165,12 +173,22 @@ public class FileTransfer {
         foc.close();
         fo.close();
     }
+    private static void move(String from, String to) throws IOException {
+        Files.move(Paths.get(from), Paths.get(to), REPLACE_EXISTING);
+    }
     public static void copyFileAndDate(File source, File dest) throws IOException {
         copyFile(source, dest);
         dest.setLastModified(source.lastModified());
     }
-    public static void moveFile(File file, File directory) throws IOException {
-        if (!file.renameTo(new File(directory + File.separator + file.getName())))
+    public static void moveFile(File from, File directory) throws IOException {
+        String fr = from.getPath();
+        String to = directory.getPath() + File.separator + from.getName();
+        move(fr, to);
+    }
+    public static void moveFileOld(File file, File directory) throws IOException {
+        java.io.File dst = new File(directory + File.separator + file.getName());
+        
+        if (!file.renameTo(dst))
             throw new IOException("Can't move " + file.toString() + " to " + directory.toString());
     }
     public boolean isSame(File a, File b) {

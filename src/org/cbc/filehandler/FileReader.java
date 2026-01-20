@@ -5,6 +5,7 @@
 
 package org.cbc.filehandler;
 
+import static com.sun.org.apache.xerces.internal.impl.io.UTF16Reader.DEFAULT_BUFFER_SIZE;
 import org.cbc.utils.system.Logger;
 import de.innosystec.unrar.Archive;
 import de.innosystec.unrar.exception.RarException;
@@ -12,6 +13,7 @@ import de.innosystec.unrar.rarfile.FileHeader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -26,38 +28,149 @@ import java.util.zip.ZipFile;
  * @author CClose changed again 19-Oct-15
  */
 public class FileReader {
+    public  enum   SourceType {Zip, Rar, Std};
     private static Logger              log               = new Logger();
+    private static String              classWorkingDir   = "";
     private        ZipFile             zip               = null;
     private        Archive             rar               = null;
+    private        java.io.File        std               = null;
     private        FileTransfer.Filter filter            = new FileTransfer().getFilter();
     private        boolean             expandZip         = true;
     private        boolean             expandDirectories = false;
+    private        ModifyFile          modifyFile        = null;
+    private        SourceType          sourceType;
+    protected      String              workingDirectory  = "";
+    /*
+     * Relative file paths are converted to full path name by prefixing with the current working directory which
+     * the directory from which the code was executed from. This class allowes the working directory to be explicitly
+     * set at the class level or the instance level.
+     */
+    private static void checkWorkingDirectory(String name) throws IOException {
+        java.io.File fname = new java.io.File(name);
+        
+        if (!fname.exists())      throw new IOException("Working directory " + name + " does not exist");    
+        if (!fname.isAbsolute())  throw new IOException("Working directory " + name + " is not absolute");
+        if (!fname.isDirectory()) throw new IOException("Working directory " + name + " is not a directory");         
+    }
+    public static void setClassWorkingDirectory(String name) throws IOException {       
+        checkWorkingDirectory(name);
+        
+        classWorkingDir = name;
+    }
+    protected static java.io.File getClassJavaFile(String file, String workingDirectory) {
+        java.io.File f = new java.io.File(file);
+        /*
+         * If file is not absolute and a workingDirectory is set, convert to an absolute
+         * path in the working directory.
+         */
+        if (!f.isAbsolute() && !"".equals(classWorkingDir)) {
+            f = new java.io.File(workingDirectory, file);
+        }
+        return f;        
+    }
+    public static java.io.File getClassJavaFile(String file) {
+        return getClassJavaFile(file, classWorkingDir);        
+    }
+    public void setWorkingDirectory(String name) throws IOException {       
+        checkWorkingDirectory(name);
+        
+        workingDirectory = name;
+    }
+    public java.io.File getJavaFile(String file) {
+        return "".equals(workingDirectory)? getClassJavaFile(file) : getClassJavaFile(file, workingDirectory);
+    }
+    public java.io.File getJavaFile(String path, String name) {
+        String file = path + "\\" + name;
+        return "".equals(workingDirectory)? getClassJavaFile(file) : getClassJavaFile(file, workingDirectory);
+    }
+    public FileReader() {
+        
+    }        
+    public FileReader(ModifyFile modFile) {
+        super();
+        modifyFile = modFile;
+    }
+    public interface ModifyFile {
+        boolean updateName(FileReader.File owner, FileName name);
+    }
+    public static void inputStreamToFile(InputStream inputStream, String file) throws IOException {
+        try (FileOutputStream outputStream = new FileOutputStream(file, false)) {
+            int    read;
+            byte[] bytes = new byte[DEFAULT_BUFFER_SIZE];
+            
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
 
+            }
+        }
+    }
     /**
      * @return the expandZip
      */
     public boolean isExpandZip() {
         return expandZip;
     }
-
     /**
      * @param expandZip the expandZip to set
      */
     public void setExpandZip(boolean expandZip) {
         this.expandZip = expandZip;
     }
-    private class JavaFileName {
-        String path = "";
-        String name = "";
-
-        JavaFileName(String fullname) {
+    public class FileName {
+        String     path = "";
+        String     name = "";
+        long       time        = 0;
+        SourceType sourceTyp1e;
+        boolean    isDirectory = false;
+        
+        FileName(String path, String name) {
+            this.path = path;
+            this.name = name;
+        }
+        FileName(String fullname) {
             String fullName = fullname.replace('/', java.io.File.separatorChar);
             int    i        = fullName.lastIndexOf(java.io.File.separatorChar);
 
             if (i != -1) {
                 path = fullName.substring(0, i);
                 name = fullName.substring(i + 1);
+                
             }
+        }
+        FileName(ZipEntry file) {
+            this(file.getName());
+            this.isDirectory = file.isDirectory();
+            this.time        = file.getTime();
+        }
+        FileName(FileHeader file) {
+            this(file.getFileNameString());
+            this.isDirectory = file.isDirectory();
+            this.time        = file.getMTime().getTime();
+        }
+        FileName(java.io.File file) {
+            this(file.getParent(), file.getName());
+            this.isDirectory = file.isDirectory();
+            this.time        = file.lastModified();
+        }
+        public String getPath() {
+            return path;
+        }
+        public String getName() {
+            return name;
+        }
+        public String getFilePath() {
+            if (path == null) return name;
+            
+            return path + java.io.File.separator + name;
+        }
+        public boolean isDirectory() {
+            return isDirectory;
+        }
+        public void setPath(String path) {
+            this.path = path;
+        }
+        public void setName(String name) {
+            this.name = name;
         }
     }
     public static class DirectoryStats {
@@ -89,9 +202,8 @@ public class FileReader {
                         loadStats(file.listFiles()[i]);
                     }
                 }
-            depth--;                    
+                depth--;                    
             }
-            return;
         }
         private DirectoryStats(java.io.File file) {
             loadStats(file);
@@ -131,36 +243,53 @@ public class FileReader {
         return new DirectoryStats(directory);
     }
     public class File {
-        private File() {
-        }
         private java.io.File stdFile     = null;
         private ZipEntry     zipFile     = null;
         private FileHeader   rarFile     = null;
         private InputStream  inputStream = null;
         private String       root        = null;
-
+        private FileName     fullName    = null;
+        
         protected File(ZipEntry file) {
-            zipFile = file;
+            zipFile    = file;
+            fullName   = new FileName(file);
+            sourceType = SourceType.Zip;
+            
+            if (modifyFile != null)  modifyFile.updateName(this, fullName);
         }
         protected File(String root, java.io.File file) {
-            this.root    = root;
-            this.stdFile = file;
+            this.root     = root;
+            this.stdFile  = file;
+            
+            fullName   = new FileName(file);
+            sourceType = SourceType.Std;
         }
         protected File(FileHeader file) {
-            rarFile = file;
+            rarFile    = file;
+            fullName   = new FileName(rarFile.getFileNameString());
+            sourceType = SourceType.Rar;
+        }
+        public File(String name) {
+            this(null, new java.io.File(name));            
         }
         public boolean isFileSystem() {
             return stdFile != null;
         }
-        public java.io.File getFile() {
+        public java.io.File getJavaFile() {
             return stdFile;
+        }        
+        public java.io.File getJavaFilex() {
+            return FileReader.this.getJavaFile(fullName.getFilePath());           
+        }
+        
+        public FileName getFullName() {
+            return fullName;
         }
         public String getName() {
-            if (stdFile != null) return stdFile.getName();
-            if (zipFile != null) return new JavaFileName(zipFile.getName()).name;
-            if (rarFile != null) return new JavaFileName(rarFile.getFileNameString()).name;
-            
-            return null;
+            return fullName.name;
+        }
+        public String getPath() {
+            return fullName.path;
         }
         public String getRoot() {
             return root;
@@ -180,6 +309,7 @@ public class FileReader {
                     inputStream = z.getInputStream(z.entries().nextElement());
                 } else
                     inputStream = new FileInputStream(stdFile);
+            
             } else if (zipFile != null) {
                 inputStream = zip.getInputStream(zipFile);
             } else if (rarFile != null) {
@@ -202,6 +332,9 @@ public class FileReader {
                 inputStream = null;
             }
         }
+        public SourceType getSourceType() {
+            return sourceType;
+        }
     }
     public void setZipSource(String fileName) throws IOException {
         zip = new ZipFile(fileName);
@@ -214,6 +347,10 @@ public class FileReader {
 
         }
     }
+    public void setStdSource(String fileName) {
+            std = new java.io.File(fileName);
+    }
+
     public void setFilter(String regex) {
         filter.setMatch(regex);
     }
@@ -224,7 +361,6 @@ public class FileReader {
     public void setSince(Date timestamp) {
         filter.setSince(timestamp);
     }
-
     public void setSince(int days) {
         GregorianCalendar cal = new GregorianCalendar();
 
@@ -244,28 +380,53 @@ public class FileReader {
             }
         }
     }
-    public ArrayList<File>getFiles(String directory) throws IOException {
-        ArrayList<File> files = new ArrayList<File>();
+    private void openSource(String file) throws IOException {
+        String fl = file.toLowerCase();
         
+        zip = null;
+        rar = null;
+        std = null;
+        
+        if (fl.endsWith(".zip")) {
+            setZipSource(file);
+            expandZip = true;
+            
+        } 
+        else if (fl.endsWith(".rar"))
+            setRarSource(file);
+        else 
+            setStdSource(file);
+    }
+    public ArrayList<File>getFiles(String directory, boolean typeFromExtension) throws IOException {
+        ArrayList<File> files = new ArrayList<>();
+        FileName        fSource;
+        File            file;
+        
+        directory = getJavaFile(directory).getAbsolutePath();
+                
+        if (typeFromExtension) openSource(directory);
+       
         if (zip != null) {
             for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
                ZipEntry ze = e.nextElement();
-        
-               if (!ze.isDirectory()) {
-                   JavaFileName id = new JavaFileName(ze.getName());
-
-                   if ((id.path.equalsIgnoreCase(directory) || expandDirectories) && filter.accept(ze.getName(), ze.getTime(), ze.isDirectory())) {
-                       files.add(new File(ze));
+               fSource     = new FileName(ze);
+       
+               if (!fSource.isDirectory()) {
+                   file = new File(ze);
+                           
+                   if (filter.accept(file.fullName)) {
+                       files.add(file);
                    }
                }
             }
         } else if (rar != null) {
             for (FileHeader h : rar.getFileHeaders()) {
+                fSource = new FileName(h);
 
-               if (!h.isDirectory()) {
-                   JavaFileName id = new JavaFileName(h.getFileNameString());
-
-                   if ((id.path.equalsIgnoreCase(directory) || expandDirectories) && filter.accept(h.getFileNameString(), h.getATime().getTime(), h.isDirectory())) {
+               if (!fSource.isDirectory()) {
+                   file =new File(h);
+                   
+                   if ((fSource.path.equalsIgnoreCase(directory) || expandDirectories) && filter.accept(file.fullName)) {
                        files.add(new File(h));
                    }
                }
@@ -275,16 +436,22 @@ public class FileReader {
             loadFiles(files, directory, new java.io.File(directory));
         
         return files;
+    }    
+    public ArrayList<File>getFiles(String directory) throws IOException {
+        return getFiles(directory, false);
     }
-    public ArrayList<File> getFiles(java.io.File directory) throws IOException {
+    public ArrayList<File>getFiles(java.io.File directory) throws IOException {
         return getFiles(directory.getCanonicalPath());
     }
-    
-
     public void close() throws IOException {
         if (zip != null) {
             zip.close();
             zip = null;
         }
+        if (rar != null) {
+            rar.close();
+            rar = null;
+        }
+        if (std != null) std = null;
     }
 }

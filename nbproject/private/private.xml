@@ -3,6 +3,16 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/1"/>
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/filehandler/FileTransfer.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/Logger.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/LogReport.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/CommandLineReader.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/SecurityConfiguration.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/LogRates.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/LoadRates.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/filehandler/FileReader.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/CurrencyRates.java</file>
+        </group>
     </open-files>
 </project-private>
