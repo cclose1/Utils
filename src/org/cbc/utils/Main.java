@@ -2,6 +2,7 @@ package org.cbc.utils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,6 +14,7 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.cbc.application.reporting.Report;
+import org.cbc.filehandler.FileOutput;
 import org.cbc.json.JSONArray;
 import org.cbc.json.JSONException;
 import org.cbc.json.JSONObject;
@@ -31,6 +33,166 @@ import org.cbc.utils.system.DateFormatter;
  * @author Chris
  */
 public class Main {
+    static private class LogValues implements FileOutput.FieldValue {
+        private FileOutput   logFile;
+        private java.io.File file;
+        
+        public LogValues(String logFileName) throws IOException {
+            this.logFile = new FileOutput(logFileName, " ");
+            this.logFile.openFile(logFileName);
+            this.logFile.setValueProvider(this);
+        }
+        public void setFile(java.io.File file) {
+            this.file = file;
+        }
+        public void addColumn(String id, int size) {
+            logFile.addColumn(id, size);
+        }
+        @Override
+        public FileOutput.Value getValue(String id) {
+            FileOutput.Value value = null;
+            
+            switch (id) {
+                case "Class":
+                    value = logFile.new Value(file.getClass().getName());
+                    break;
+                case "Parent":
+                    value = logFile.new Value(file.getParent());
+                    break;
+                case "Name":
+                    value = logFile.new Value(file.getName());
+                    break;
+                case "AbsPath":
+                    value = logFile.new Value(file.getAbsolutePath());
+                    break;                    
+            }
+            return value;
+        }
+        public void outputFields(java.io.File file) throws IOException {
+            this.file = file;
+            logFile.addFields();
+        }
+    }
+    private static class CompDetails {
+        public FileOutput report = null;
+        public FileClass  jav    = new FileClass();
+        public FileClass  cbc    = new FileClass();
+        
+        private class FileClass  implements FileOutput.FieldValue {
+            /*
+            public String        className;
+            public String        path;
+            public String        parent;
+            public String        name;
+            public String  absPath;
+            public boolean isAbs;   
+            public boolean isDir;            
+            public boolean isFile;
+            public boolean exists;
+            */
+            public java.io.File file;
+            
+            public void setProperties(java.io.File file) throws IOException {
+                report.setValueProvider(this);
+                this.file = file;
+                /*
+                className = file.getClass().getName();
+                path      = file.getPath();
+                parent    = file.getParent();
+                name      = file.getName();
+                absPath   = file.getAbsolutePath();
+                isAbs     = file.isAbsolute();
+                isDir     = file.isDirectory();
+                isFile    = file.isFile();
+                exists    = file.exists();
+                */
+                if (report != null) {
+                    report.addFields();
+                }
+            }
+            @Override
+            public FileOutput.Value getValue(String id) {
+                FileOutput.Value value = report.new Value("Id " + id + " not implemented");
+                
+                switch (id) {
+                    case "Class":
+                        value = report.new Value(file.getClass().getName());
+                        break;
+                  
+                    case "Path":
+                        value = report.new Value(file.getPath());
+                        break;
+                }
+                switch (id) {
+                    case "Parent":
+                        value = report.new Value(file.getParent());
+                        break;
+                }
+                switch (id) {
+                    case "Name":
+                        value = report.new Value(file.getName());
+                        break;
+                }
+                switch (id) {
+                    case "Abs":
+                        value = report.new Value(file.isAbsolute());
+                        break;
+                }
+                switch (id) {
+                    case "Dir":
+                        value = report.new Value(file.isDirectory());
+                        break;
+                }
+                switch (id) {
+                    case "File":
+                        value = report.new Value(file.isFile());
+                        break;
+                }
+                switch (id) {
+                    case "Exists":
+                        value = report.new Value(file.exists());
+                        break;
+                }
+                switch (id) {
+                    case "AbsPath":
+                        value = report.new Value(file.getAbsolutePath());
+                        break;
+                }
+                return value;
+            }
+        }
+        public void setReportFile(String file) throws IOException {
+            report = new FileOutput(file, " ");
+            report.openFile(file, new Date());
+            report.addColumn("Class",   25);
+            report.addColumn("Path",    15);
+            report.addColumn("Parent",  15);
+            report.addColumn("Name",    15);           
+            report.addColumn("Abs",     3);            
+            report.addColumn("Dir",     3);        
+            report.addColumn("File",    4);        
+            report.addColumn("Exists",  7);
+            report.addColumn("AbsPath", 25); 
+        }
+        public void log(java.io.File jav, org.cbc.filehandler.File cbc) throws IOException {
+            this.jav.setProperties(jav);
+            this.cbc.setProperties(cbc);
+        }
+        public void log(java.io.File jav) throws IOException {
+            log(jav, new org.cbc.filehandler.File(jav));
+        }
+        public void closeReport() throws IOException {
+            if (report != null) {
+                report.close();
+                report = null;
+            }            
+        }
+    }
+    static private void compare(CompDetails cd, String path, String name, String workingDirectory) throws IOException {
+        org.cbc.filehandler.File.setWorkingDirectory(workingDirectory);
+        cd.log(new java.io.File(path, name));
+    };
+
     private static void readFile(String file) throws FileNotFoundException, JSONException {
         JSONReader r = new JSONReader(new File(file));
         JSONValue  v;
@@ -146,8 +308,38 @@ public class Main {
             Report.error(date, ex);
         }
     }
-  
-    public static void main(String[] args) throws SQLException {
+    private static void testCbcFile() {        
+        try {
+            CompDetails cd = new CompDetails();
+            cd.setReportFile("C:/Logs/Test/File!Date.log");
+        
+            compare(cd, null, "TestDirOrFl", "C:/Test/CbcIo/");
+            compare(cd,  null, "C:/TestDir", "C:/Test/CbcIo/");
+            cd.closeReport();
+        } catch (IOException ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    static private void logFilesList(LogValues log, java.io.File file) throws IOException {
+        java.io.File list[] = file.listFiles();
+        
+        for (java.io.File fl : list) {
+            log.outputFields(fl);
+        }
+    }
+    static private void testList() throws IOException {
+        LogValues log = new LogValues("C:/Logs/Test/FilesList!Date.log");
+        log.addColumn("Class",   15);
+        log.addColumn("Parent",  20);
+        log.addColumn("Name",    20);
+        log.addColumn("AbsPath", 50);
+        org.cbc.filehandler.File.setWorkingDirectory("C:/Test/CbcIo/");
+        logFilesList(log, new java.io.File("Data"));
+        logFilesList(log, new org.cbc.filehandler.File("Data"));        
+    }
+    public static void main(String[] args) throws SQLException, IOException {
+//        testCbcFile();
+        testList();
         testDate("01-08-02");
         testDate("2014-08-02");
         testDate("01-08-2002");

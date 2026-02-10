@@ -5,7 +5,6 @@
 
 package org.cbc.filehandler;
 
-import static com.sun.org.apache.xerces.internal.impl.io.UTF16Reader.DEFAULT_BUFFER_SIZE;
 import org.cbc.utils.system.Logger;
 import de.innosystec.unrar.Archive;
 import de.innosystec.unrar.exception.RarException;
@@ -30,7 +29,6 @@ import java.util.zip.ZipFile;
 public class FileReader {
     public  enum   SourceType {Zip, Rar, Std};
     private static Logger              log               = new Logger();
-    private static String              classWorkingDir   = "";
     private        ZipFile             zip               = null;
     private        Archive             rar               = null;
     private        java.io.File        std               = null;
@@ -39,49 +37,32 @@ public class FileReader {
     private        boolean             expandDirectories = false;
     private        ModifyFile          modifyFile        = null;
     private        SourceType          sourceType;
-    protected      String              workingDirectory  = "";
+
     /*
-     * Relative file paths are converted to full path name by prefixing with the current working directory which
-     * the directory from which the code was executed from. This class allowes the working directory to be explicitly
-     * set at the class level or the instance level.
+     * This sets the working directory for org.cbc.filehandler.File. The following absolute method could be
+     * directly called, but have been added as a convenience, allowing the user of this class to avoid using
+     * the org.cbc.filehandler.File class.
      */
-    private static void checkWorkingDirectory(String name) throws IOException {
-        java.io.File fname = new java.io.File(name);
-        
-        if (!fname.exists())      throw new IOException("Working directory " + name + " does not exist");    
-        if (!fname.isAbsolute())  throw new IOException("Working directory " + name + " is not absolute");
-        if (!fname.isDirectory()) throw new IOException("Working directory " + name + " is not a directory");         
+    static public void setWorkingDirectory(String name) throws IOException {
+         org.cbc.filehandler.File.setWorkingDirectory(name);
     }
-    public static void setClassWorkingDirectory(String name) throws IOException {       
-        checkWorkingDirectory(name);
-        
-        classWorkingDir = name;
+    public java.io.File absoluteFileFor(String name) {
+        return org.cbc.filehandler.File.absoluteFileFor(name);
     }
-    protected static java.io.File getClassJavaFile(String file, String workingDirectory) {
-        java.io.File f = new java.io.File(file);
-        /*
-         * If file is not absolute and a workingDirectory is set, convert to an absolute
-         * path in the working directory.
-         */
-        if (!f.isAbsolute() && !"".equals(classWorkingDir)) {
-            f = new java.io.File(workingDirectory, file);
-        }
-        return f;        
+    public java.io.File absoluteFileFor(String path, String name) {
+        return org.cbc.filehandler.File.absoluteFileFor(path, name);
     }
-    public static java.io.File getClassJavaFile(String file) {
-        return getClassJavaFile(file, classWorkingDir);        
+    public java.io.File absoluteFileFor(java.io.File file) {
+        return org.cbc.filehandler.File.absoluteFileFor(file);
     }
-    public void setWorkingDirectory(String name) throws IOException {       
-        checkWorkingDirectory(name);
-        
-        workingDirectory = name;
+    public String absolutePathFor(String name) {
+        return org.cbc.filehandler.File.absolutePathFor(name);
     }
-    public java.io.File getJavaFile(String file) {
-        return "".equals(workingDirectory)? getClassJavaFile(file) : getClassJavaFile(file, workingDirectory);
+    public String absolutePathFor(String path, String name) {
+        return org.cbc.filehandler.File.absolutePathFor(path, name);
     }
-    public java.io.File getJavaFile(String path, String name) {
-        String file = path + "\\" + name;
-        return "".equals(workingDirectory)? getClassJavaFile(file) : getClassJavaFile(file, workingDirectory);
+    public String absolutePathFor(java.io.File file) {
+        return org.cbc.filehandler.File.absolutePathFor(file);
     }
     public FileReader() {
         
@@ -91,18 +72,23 @@ public class FileReader {
         modifyFile = modFile;
     }
     public interface ModifyFile {
-        boolean updateName(FileReader.File owner, FileName name);
-    }
-    public static void inputStreamToFile(InputStream inputStream, String file) throws IOException {
-        try (FileOutputStream outputStream = new FileOutputStream(file, false)) {
+        String changeName(String path, String name);
+    }    
+    public static void inputStreamToFile(InputStream inputStream, java.io.File file) throws IOException {        
+        try (FileOutputStream outputStream = new FileOutputStream(org.cbc.filehandler.File.absolutePathFor(file), false)) {
             int    read;
-            byte[] bytes = new byte[DEFAULT_BUFFER_SIZE];
+            byte[] bytes = new byte[4096];
             
             while ((read = inputStream.read(bytes)) != -1) {
                 outputStream.write(bytes, 0, read);
-
             }
         }
+    }    
+    public static void inputStreamToFile(InputStream inputStream, String file) throws IOException {
+        inputStreamToFile(inputStream, new java.io.File(file));
+    }   
+    public static void inputStreamToFile(InputStream inputStream, String path, String name) throws IOException {
+        inputStreamToFile(inputStream, new java.io.File(path, name));
     }
     /**
      * @return the expandZip
@@ -120,7 +106,6 @@ public class FileReader {
         String     path = "";
         String     name = "";
         long       time        = 0;
-        SourceType sourceTyp1e;
         boolean    isDirectory = false;
         
         FileName(String path, String name) {
@@ -198,8 +183,8 @@ public class FileReader {
                      */
                     log.comment("loadStats file " + file.getAbsolutePath() + " returned a null file list");
                 } else {
-                    for (int i = 0; i < file.listFiles().length; i++) {
-                        loadStats(file.listFiles()[i]);
+                    for (java.io.File listFile : file.listFiles()) {
+                        loadStats(listFile);
                     }
                 }
                 depth--;                    
@@ -243,23 +228,22 @@ public class FileReader {
         return new DirectoryStats(directory);
     }
     public class File {
-        private java.io.File stdFile     = null;
+        private java.io.File stdFile     = null;        ;
+
         private ZipEntry     zipFile     = null;
         private FileHeader   rarFile     = null;
         private InputStream  inputStream = null;
-        private String       root        = null;
         private FileName     fullName    = null;
         
         protected File(ZipEntry file) {
             zipFile    = file;
             fullName   = new FileName(file);
             sourceType = SourceType.Zip;
-            
-            if (modifyFile != null)  modifyFile.updateName(this, fullName);
+                        
+            if (modifyFile != null) fullName.name = modifyFile.changeName(fullName.getPath(), fullName.getName());
         }
-        protected File(String root, java.io.File file) {
-            this.root     = root;
-            this.stdFile  = file;
+        protected File(java.io.File file) {
+            this.stdFile = file;
             
             fullName   = new FileName(file);
             sourceType = SourceType.Std;
@@ -270,18 +254,14 @@ public class FileReader {
             sourceType = SourceType.Rar;
         }
         public File(String name) {
-            this(null, new java.io.File(name));            
+            this(new org.cbc.filehandler.File(name));            
         }
         public boolean isFileSystem() {
             return stdFile != null;
         }
-        public java.io.File getJavaFile() {
+        public java.io.File getStdFile() {
             return stdFile;
-        }        
-        public java.io.File getJavaFilex() {
-            return FileReader.this.getJavaFile(fullName.getFilePath());           
-        }
-        
+        }         
         public FileName getFullName() {
             return fullName;
         }
@@ -290,14 +270,6 @@ public class FileReader {
         }
         public String getPath() {
             return fullName.path;
-        }
-        public String getRoot() {
-            return root;
-        }
-        public String getRelativeName() throws IOException {
-            if (root == null) return getName();
-            
-            return stdFile.getCanonicalPath().substring(root.length());
         }
         public InputStream open() throws IOException {
             if (stdFile != null) {
@@ -368,15 +340,17 @@ public class FileReader {
         cal.add(GregorianCalendar.DAY_OF_MONTH, -days);
         setSince(cal.getTime());
     }
-    private void loadFiles(ArrayList<File> files, String root, java.io.File directory) throws IOException {
+    private void loadFiles(ArrayList<File> files, org.cbc.filehandler.File directory) throws IOException {
         java.io.File[] list = FileTransfer.getFiles(directory, filter);
 
         if (list != null) {
             for (java.io.File f : list) {
+                org.cbc.filehandler.File fl = new org.cbc.filehandler.File(f);
+                
                 if (f.isDirectory() && expandDirectories)
-                    loadFiles(files, root, f);
+                    loadFiles(files, fl);
                 else
-                    files.add(new File(root, f));
+                    files.add(new File(fl));
             }
         }
     }
@@ -397,14 +371,14 @@ public class FileReader {
         else 
             setStdSource(file);
     }
-    public ArrayList<File>getFiles(String directory, boolean typeFromExtension) throws IOException {
+    public ArrayList<File>getFiles(String source, boolean typeFromExtension) throws IOException {
         ArrayList<File> files = new ArrayList<>();
         FileName        fSource;
         File            file;
         
-        directory = getJavaFile(directory).getAbsolutePath();
+        source = absolutePathFor(source);
                 
-        if (typeFromExtension) openSource(directory);
+        if (typeFromExtension) openSource(source);
        
         if (zip != null) {
             for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
@@ -426,23 +400,17 @@ public class FileReader {
                if (!fSource.isDirectory()) {
                    file =new File(h);
                    
-                   if ((fSource.path.equalsIgnoreCase(directory) || expandDirectories) && filter.accept(file.fullName)) {
+                   if ((fSource.path.equalsIgnoreCase(source) || expandDirectories) && filter.accept(file.fullName)) {
                        files.add(new File(h));
                    }
                }
                System.out.println(h.getFileNameString() + " w " + h.getFileNameW());
             }
         } else
-            loadFiles(files, directory, new java.io.File(directory));
+            loadFiles(files, new org.cbc.filehandler.File(source));
         
         return files;
     }    
-    public ArrayList<File>getFiles(String directory) throws IOException {
-        return getFiles(directory, false);
-    }
-    public ArrayList<File>getFiles(java.io.File directory) throws IOException {
-        return getFiles(directory.getCanonicalPath());
-    }
     public void close() throws IOException {
         if (zip != null) {
             zip.close();

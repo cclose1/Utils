@@ -185,12 +185,6 @@ public class FileTransfer {
         String to = directory.getPath() + File.separator + from.getName();
         move(fr, to);
     }
-    public static void moveFileOld(File file, File directory) throws IOException {
-        java.io.File dst = new File(directory + File.separator + file.getName());
-        
-        if (!file.renameTo(dst))
-            throw new IOException("Can't move " + file.toString() + " to " + directory.toString());
-    }
     public boolean isSame(File a, File b) {
         // When setting the lastModified time, there seems to be some rounding takes place. Consider times equal if they are within
         // 5 seconds of each other.
@@ -222,41 +216,15 @@ public class FileTransfer {
         File list[] = source.listFiles(filter);
         
         if (!source.isDirectory())
-            throw new IOException(source.getCanonicalPath() + " is not a directory");
+            throw new IOException(source.getAbsolutePath()+ " is not a directory");
         
         if (list != null) {
-            Arrays.sort(
-                    list,
-                    new Comparator<File>() {
-                        public int compare(File f1, File f2) {
-                            return Long.valueOf(f1.lastModified()).compareTo(f2.lastModified());
-                        }
-                    });
+            Arrays.sort(list, (File f1, File f2) -> Long.valueOf(f1.lastModified()).compareTo(f2.lastModified()));
         }
         return list;
     }
     public Filter getFilter() {
         return new Filter();
-    }
-    public static File[] getFiles(File source, Date since, ArrayList<String> extensions, boolean includeDirectories) throws IOException {
-        Filter filter = new FileTransfer().getFilter();
-
-        filter.setSince(since);
-        filter.setFilesOnly(!includeDirectories);
-        filter.setExtensions(extensions);
-
-        return getFiles(source, filter);
-    }
-    public static File[] getFiles(File source, Date since, ArrayList<String> extensions) throws IOException {
-        return getFiles(source, since, extensions, false);
-    }
-    public static File[] getFiles(File source, String regex, boolean includeDirectories) throws IOException {
-        Filter filter = new FileTransfer().getFilter();
-
-        filter.setMatch(regex);
-        filter.setFilesOnly(!includeDirectories);
-
-        return getFiles(source, filter);
     }
     public CopyResult copyFolder(File source, File dest, Date since, ArrayList<String> extensions, boolean onlyChanged) {
         Filter     filter = new Filter();
