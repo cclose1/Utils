@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 import org.cbc.Utils;
+import org.cbc.utils.data.EnhancedResultSet;
 
 /**
  * Contains a JSON object. The JSON object is a collection of pairs of name and value. The name is a String and the value
@@ -58,61 +59,6 @@ public class JSONObject implements Iterable<JSONNameValue>{
             }
             return false;
         }        
-    }
-    /*
-     * A wrapper for a Result set allowing access the column values in a row and the associated meta data.
-     *
-     * The user of this class provides the result set and the column number of the target. These can be retrieved
-     * although it should not be necessary as the user should have the result set and know the last column accessed. 
-     * However, this class can be passed to another method, thus providing it with these parameters.
-     *
-     * It may better to define this class in DatabaseSession and make non static so that it can access the 
-     * DatabaseSession data.
-     */
-    public static class DBRow {
-        private ResultSet rs     = null;
-        private int       column;
-        
-        public DBRow(ResultSet rs) {
-            this.rs     = rs;
-            this.column = -1;
-        }
-        public boolean nextRow() throws SQLException {
-            return this.rs.next();
-        }
-        public ResultSet getResult() {
-            return this.rs;
-        }
-        public int getColumnCount() throws SQLException {
-            return rs.getMetaData().getColumnCount();
-        }
-        public void setColumn(int column) {
-            this.column = column;
-        }
-        public int getColumn() {
-            return this.column;
-        }
-        public String getTableName() throws SQLException {
-            return rs.getMetaData().getTableName(1);
-        }
-        public String getName() throws SQLException {
-            return rs.getMetaData().getColumnLabel(column);
-        }
-        public String getType() throws SQLException {
-            return rs.getMetaData().getColumnTypeName(column).toLowerCase();
-        }
-        public String getValue() throws SQLException {
-            return rs.getString(column);
-        }
-        public int getPrecision() throws SQLException {
-            return rs.getMetaData().getPrecision(column);
-        }
-        public int getScale() throws SQLException {
-            return rs.getMetaData().getScale(column);
-        }
-        public int getIsNullable() throws SQLException {
-            return rs.getMetaData().isNullable(column);
-        }
     }
     private class ObjectIterator implements Iterator<JSONNameValue> {
         int              count    = 0;
@@ -168,7 +114,7 @@ public class JSONObject implements Iterable<JSONNameValue>{
      * @param insertOrdered true if insert ordering is enabled.
      */
     public JSONObject(boolean insertOrdered) {
-        order = insertOrdered? new ArrayList<String>() : null;
+        order = insertOrdered? new ArrayList<>() : null;
     }
     /**
      * Creates an Object with insert ordering disabled.
@@ -317,13 +263,15 @@ public class JSONObject implements Iterable<JSONNameValue>{
      * Returns the object string.
      * @return Object string.
      */
+    @Override
     public String toString() {
         return toString(new JSONFormat(), null);
     }
+    @Deprecated
     private void add(String name, ResultSet rs, JSONObject.DBOptions dbOptions) throws SQLException, JSONException, ParseException {
         JSONArray row;
-        DBRow dbRow = new DBRow(rs);
-        int count = rs.getMetaData().getColumnCount();
+        EnhancedResultSet dbRow = new EnhancedResultSet(rs);
+        int               count = rs.getMetaData().getColumnCount();
         
         this.add("Table", new JSONValue(name));
         row = this.add("Header", (JSONArray)null);
@@ -352,13 +300,16 @@ public class JSONObject implements Iterable<JSONNameValue>{
             }
         }
     }
+    @Deprecated
     public void add(String name, ResultSet rs, String optionalColumns) throws SQLException, JSONException, ParseException {
         add(name, rs, new DBOptions(optionalColumns));
     }
+    @Deprecated
     public void add(String name, ResultSet rs, boolean toLocalTime) throws SQLException, JSONException, ParseException {
         add(name, rs, new DBOptions(toLocalTime));
     }
+    @Deprecated
     public void add(String name, ResultSet rs) throws SQLException, JSONException, ParseException {
         add(name, rs, new DBOptions());
-    } 
+    }
 }

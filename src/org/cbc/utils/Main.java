@@ -7,18 +7,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.cbc.application.reporting.Report;
+import static org.cbc.Utils.rpad;
 import org.cbc.filehandler.FileOutput;
 import org.cbc.json.JSONArray;
 import org.cbc.json.JSONException;
 import org.cbc.json.JSONObject;
 import org.cbc.json.JSONReader;
+import org.cbc.json.JSONTable;
 import org.cbc.json.JSONValue;
 import org.cbc.sql.SQLSelectBuilder;
 import org.cbc.utils.data.DatabaseSession;
@@ -33,14 +31,14 @@ import org.cbc.utils.system.DateFormatter;
  * @author Chris
  */
 public class Main {
-    static private class LogValues implements FileOutput.FieldValue {
+    static private int testNo = 0;
+    static private class LogValues implements FileOutput.TableSource {
         private FileOutput   logFile;
         private java.io.File file;
         
-        public LogValues(String logFileName) throws IOException {
-            this.logFile = new FileOutput(logFileName, " ");
-            this.logFile.openFile(logFileName);
-            this.logFile.setValueProvider(this);
+        public LogValues(FileOutput logFile) throws IOException {
+            this.logFile = logFile;
+            this.logFile.setTableSource(this);
         }
         public void setFile(java.io.File file) {
             this.file = file;
@@ -48,7 +46,6 @@ public class Main {
         public void addColumn(String id, int size) {
             logFile.addColumn(id, size);
         }
-        @Override
         public FileOutput.Value getValue(String id) {
             FileOutput.Value value = null;
             
@@ -68,115 +65,85 @@ public class Main {
             }
             return value;
         }
+        @Override
+        public void setColumns(FileOutput log) {        
+            log.addColumn("Class",   25);
+            log.addColumn("Parent",  15);
+            log.addColumn("Name",    15);  
+            log.addColumn("AbsPath", -25);    
+        }
         public void outputFields(java.io.File file) throws IOException {
             this.file = file;
-            logFile.addFields();
+            logFile.addTableRow();
         }
     }
     private static class CompDetails {
         public FileOutput report = null;
-        public FileClass  jav    = new FileClass();
-        public FileClass  cbc    = new FileClass();
+        public FileClass  file   = new FileClass();
         
-        private class FileClass  implements FileOutput.FieldValue {
-            /*
-            public String        className;
-            public String        path;
-            public String        parent;
-            public String        name;
-            public String  absPath;
-            public boolean isAbs;   
-            public boolean isDir;            
-            public boolean isFile;
-            public boolean exists;
-            */
+        private class FileClass  implements FileOutput.TableSource {
             public java.io.File file;
             
-            public void setProperties(java.io.File file) throws IOException {
-                report.setValueProvider(this);
+            public void logFile(java.io.File file) throws IOException {
                 this.file = file;
-                /*
-                className = file.getClass().getName();
-                path      = file.getPath();
-                parent    = file.getParent();
-                name      = file.getName();
-                absPath   = file.getAbsolutePath();
-                isAbs     = file.isAbsolute();
-                isDir     = file.isDirectory();
-                isFile    = file.isFile();
-                exists    = file.exists();
-                */
                 if (report != null) {
-                    report.addFields();
+                    report.addTableRow();
                 }
             }
-            @Override
             public FileOutput.Value getValue(String id) {
                 FileOutput.Value value = report.new Value("Id " + id + " not implemented");
                 
                 switch (id) {
                     case "Class":
                         value = report.new Value(file.getClass().getName());
-                        break;
-                  
+                        break;                  
                     case "Path":
                         value = report.new Value(file.getPath());
                         break;
-                }
-                switch (id) {
                     case "Parent":
                         value = report.new Value(file.getParent());
                         break;
-                }
-                switch (id) {
                     case "Name":
                         value = report.new Value(file.getName());
                         break;
-                }
-                switch (id) {
                     case "Abs":
                         value = report.new Value(file.isAbsolute());
                         break;
-                }
-                switch (id) {
                     case "Dir":
                         value = report.new Value(file.isDirectory());
                         break;
-                }
-                switch (id) {
                     case "File":
                         value = report.new Value(file.isFile());
                         break;
-                }
-                switch (id) {
                     case "Exists":
                         value = report.new Value(file.exists());
                         break;
-                }
-                switch (id) {
                     case "AbsPath":
                         value = report.new Value(file.getAbsolutePath());
                         break;
                 }
                 return value;
             }
+            @Override
+            public void setColumns(FileOutput log) {
+                log.addColumn("Class",    25);
+                log.addColumn("Path",     20);
+                log.addColumn("Parent",   15);
+                log.addColumn("Name",     15);
+                log.addColumn("Abs",      3);
+                log.addColumn("Dir",      3);
+                log.addColumn("File",     4);
+                log.addColumn("Exists",   7);
+                log.addColumn("AbsPath", -25);
+            }
         }
-        public void setReportFile(String file) throws IOException {
-            report = new FileOutput(file, " ");
-            report.openFile(file, new Date());
-            report.addColumn("Class",   25);
-            report.addColumn("Path",    15);
-            report.addColumn("Parent",  15);
-            report.addColumn("Name",    15);           
-            report.addColumn("Abs",     3);            
-            report.addColumn("Dir",     3);        
-            report.addColumn("File",    4);        
-            report.addColumn("Exists",  7);
-            report.addColumn("AbsPath", 25); 
+        public CompDetails(FileOutput log) {
+            report = log;
+            report.setTableSource(file);
         }
         public void log(java.io.File jav, org.cbc.filehandler.File cbc) throws IOException {
-            this.jav.setProperties(jav);
-            this.cbc.setProperties(cbc);
+            this.file.logFile(jav);
+            this.file.logFile(cbc);
         }
         public void log(java.io.File jav) throws IOException {
             log(jav, new org.cbc.filehandler.File(jav));
@@ -193,25 +160,25 @@ public class Main {
         cd.log(new java.io.File(path, name));
     };
 
-    private static void readFile(String file) throws FileNotFoundException, JSONException {
+    private static void readFile(String file, FileOutput report) throws FileNotFoundException, JSONException, IOException {
         JSONReader r = new JSONReader(new File(file));
         JSONValue  v;
         JSONReader.Token t;
         
         while ((t = r.next()) != null) {
-            System.out.println(t.toString());
+            report.writeLine(t.toString());
         }
         v = JSONValue.load(new File(file));
-        System.out.println(v.toString());
+        report.writeLine(v.toString());
     }
-    public static void testJSON() {
+    public static void testJSON(FileOutput report) throws IOException {
         try {
-            readFile("C:\\MyFiles\\My Documents\\AgeConcern\\LoadCRM.txt");
+            readFile("C:\\MyFiles\\My Documents\\AgeConcern\\LoadCRM.txt", report);
             JSONObject json = new JSONObject();
             JSONObject obj1;
             JSONArray arr1;
             JSONValue val;
-            System.out.println(json.toString());
+            report.writeLine(json.toString());
             json.add("a", new JSONValue(100));
             json.add("b", new JSONValue(new JSONArray()));
             obj1 = json.add("c", new JSONObject());
@@ -224,22 +191,41 @@ public class Main {
             obj1.add("a2", new JSONValue("str2\tx\\ / \" end"));
 
             for (JSONValue v : arr1) {
-                System.out.println(v.getString());
+                report.writeLine(v.getString());
             }
             val = obj1.get("a2");
-            //       obj1.get("a2").getArray();
-            System.out.println("Type " + val.getType().toString() + " value " + val.getString());
-            System.out.println(json.toString());
+            report.writeLine("Type " + val.getType().toString() + " value " + val.getString());
+            report.writeLine(json.toString());
         } catch (JSONException e) {
-            System.out.println(e.getMessage());
+            report.write(e);
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+            report.write(ex);
         }        
     }
-    public static void testSQLBuilder() throws ParseException, SQLException {
+    
+    public static void testJSONTable(FileOutput report) throws IOException {
+        try {
+            JSONTable table = new JSONTable("Test");
+            table.addColumn("Text1", JSONTable.ColumnType.Text,   12, 0);
+            table.addColumn("Text2", JSONTable.ColumnType.Text,     5,   0);
+            table.addColumn("Ts1",   JSONTable.ColumnType.DateTime, 5,   0);
+            table.addColumn("Tim1",  JSONTable.ColumnType.Time,     5,   0);
+            table.addColumn("Dec1",  JSONTable.ColumnType.Decimal , 6,   2);
+            table.addColumn("Int",   JSONTable.ColumnType.Int,      5,   0);
+            table.addRow();
+            table.set("Text1", "Val1");
+            table.set("Int", 1);
+            table.set("Tim1", 1.5);
+            report.writeLine(table.toString());
+        } catch (JSONException e) {
+            report.write(e);
+        } catch (FileNotFoundException ex) {
+            report.write(ex);
+        }        
+    }
+    public static void testSQLBuilder(FileOutput report) throws ParseException, SQLException, IOException {
         DatabaseSession  db  = new DatabaseSession("mysql", "127.0.0.1", "Expenditure");
         SQLSelectBuilder sql = new SQLSelectBuilder("", db.getProtocol());
-        Date test = (new SimpleDateFormat("H:m:s")).parse("12:34:56");
 
         try {
             db.setUser("Test2", "Test2");
@@ -255,7 +241,9 @@ public class Main {
             sql.addField("MaxIdleTime");
             sql.setFrom("Session");
             sql.setWhere("SessionId = ?SessionId AND State = ?State AND P1 = ?Date AND P2 = ?Time AND P3 = ?TimeStamp AND P4 = ?Int");
-            Report.comment(null, sql.build());
+            report.add("SQL ");
+            report.add(sql.build());
+            report.writeLine();
             sql.setParameter("SessionId", java.sql.Types.VARCHAR,   "Session1");
             sql.setParameter("State",     java.sql.Types.VARCHAR,   "Active");
             sql.setParameter("Date",      java.sql.Types.DATE,      "2014-08-31");
@@ -263,8 +251,10 @@ public class Main {
             sql.setParameter("TimeStamp", java.sql.Types.TIMESTAMP, "2014-08-31 12:34:56.1");
             sql.setParameter("Int",       java.sql.Types.INTEGER,   123);
             PreparedStatement st = db.getConnection().prepareStatement(sql.resolve(false));
-            sql.setParameters(st);
-            Report.comment(null, sql.resolve(false));
+            sql.setParameters(st);      
+            report.add("Resolve ");
+            report.add(sql.resolve(false));
+            report.writeLine();
             sql.clear();
             sql.addField("SeqNo");
             sql.addField("SessionId");
@@ -279,43 +269,43 @@ public class Main {
             sql.setParameter("TimeStamp", java.sql.Types.TIMESTAMP, "2013-08-31 12:34:56.2");
             sql.setParameter("Accesses",  java.sql.Types.INTEGER,   9);
             st = db.getConnection().prepareStatement(sql.resolve(false));
-            sql.setParameters(st);
-            Report.comment(null, sql.resolve(false));
+            sql.setParameters(st);            
+            report.add("Resolve ");
+            report.add(sql.resolve(false));
+            report.writeLine();
             ResultSet rs = st.executeQuery();
-            DatabaseSession.log(rs, 31);
+            DatabaseSession.log(report, rs, 31);
         } catch (SQLException ex) {
-            Report.error(null, ex);
+            report.write(ex);
         } catch (ParseException ex) {
-            Report.error(null, ex);
+            report.write(ex);
         }
     }
-    private static void testDate(String date) {
-        try {
-            Report.comment(null, DateFormatter.getDateFormat(date) + ' ' + DateFormatter.parseDate(date));
+    private static void testDate(FileOutput report, String date) throws IOException {
+        String format = DateFormatter.getDateFormat(date);
+        
+        try {            
+            report.writeLine("Text " + rpad(date, 20) + " format " + format + " result " + DateFormatter.parseDate(date));
         } catch (ParseException ex) {
-            Report.error(date, ex);
+            report.write(ex);
         }
     }
-    private static void testDate(String date, String format) {
+    private static void testDate(FileOutput report, String date, String format) throws IOException {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
         
         try {
-            LocalDateTime dt = LocalDateTime.parse(date, formatter);
-
             Object d = formatter.parse(date);
-            Report.comment(null, d.toString());
+            report.writeLine("Text " + rpad(date, 20) + " format " + format + " result " + d.toString());
         } catch (Exception ex) {
-            Report.error(date, ex);
+            report.write("Date " + date + " format " + format, ex);
         }
     }
-    private static void testCbcFile() {        
+    private static void testCbcFile(FileOutput log) {        
         try {
-            CompDetails cd = new CompDetails();
-            cd.setReportFile("C:/Logs/Test/File!Date.log");
-        
+            CompDetails cd = new CompDetails(log);
             compare(cd, null, "TestDirOrFl", "C:/Test/CbcIo/");
             compare(cd,  null, "C:/TestDir", "C:/Test/CbcIo/");
-            cd.closeReport();
+            compare(cd,  "TestDirOrFl", "Folder1", "C:/Test/CbcIo/");
         } catch (IOException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -327,31 +317,46 @@ public class Main {
             log.outputFields(fl);
         }
     }
-    static private void testList() throws IOException {
-        LogValues log = new LogValues("C:/Logs/Test/FilesList!Date.log");
-        log.addColumn("Class",   15);
-        log.addColumn("Parent",  20);
-        log.addColumn("Name",    20);
-        log.addColumn("AbsPath", 50);
+    static private void testList(FileOutput logFile) throws IOException {
+        LogValues log = new LogValues(logFile);
         org.cbc.filehandler.File.setWorkingDirectory("C:/Test/CbcIo/");
         logFilesList(log, new java.io.File("Data"));
         logFilesList(log, new org.cbc.filehandler.File("Data"));        
     }
-    public static void main(String[] args) throws SQLException, IOException {
-//        testCbcFile();
-        testList();
-        testDate("01-08-02");
-        testDate("2014-08-02");
-        testDate("01-08-2002");
-        testDate("2001-08-2002");
-        testDate("2020-08x28 23:12:12", "yyyy-MM-dd HH:mm:ss");
-        testDate("2020-08-28 23:12:12", "yyyy-MM-dd HH:mm:ss");
-        testDate("2020-08-36 23:12:12", "yyyy-MM-dd HH:mm:ss");
-        testJSON();
-        try {
-            testSQLBuilder();
-        } catch (ParseException ex) {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
+    private static void testDate(FileOutput log) throws IOException {        
+        testDate(log, "01-08-02");
+        testDate(log, "2014-08-02");
+        testDate(log, "01-08-2002");
+        testDate(log, "2001-08-2002");
+        testDate(log, "2020-08x28 23:12:12", "yyyy-MM-dd HH:mm:ss");
+        testDate(log, "2020-08-28 23:12:12", "yyyy-MM-dd HH:mm:ss");
+        testDate(log, "2020-08-36 23:12:12", "yyyy-MM-dd HH:mm:ss");
+    }
+    private static void startTest(FileOutput file, String name) throws IOException {
+        if (++testNo != 1) file.writeLine();
+        
+        file.clearColumns();
+        file.writeLine("Test " + name);
+        file.writeLine();
+    }
+    /*
+     * Most of these tests are not of much use. There is no means of checking if the results are as they should be.
+    */
+    public static void main(String[] args) throws SQLException, IOException, ParseException {
+        FileOutput log = new FileOutput("C:/Logs/Test/Utils!Date.log");
+        startTest(log, "JSON Table");
+        testJSONTable(log);
+        if (log != null) return;
+        startTest(log, "Cbc File");
+        testCbcFile(log);
+        startTest(log, "List Files");
+        testList(log);
+        startTest(log, "Test Date");
+        testDate(log);
+        startTest(log, "JSOn");
+        testJSON(log);
+        startTest(log, "SQLBuilder");
+        testSQLBuilder(log);
+        log.close();
     }
 }

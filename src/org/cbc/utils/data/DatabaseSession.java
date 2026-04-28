@@ -4,6 +4,7 @@
  */
 package org.cbc.utils.data;
 
+import java.io.IOException;
 import org.cbc.utils.system.Logger;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -21,6 +22,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import org.cbc.Utils;
 import org.cbc.application.reporting.Report;
+import org.cbc.filehandler.FileOutput;
 import org.cbc.json.JSONArray;
 import org.cbc.json.JSONException;
 import org.cbc.json.JSONObject;
@@ -63,22 +65,22 @@ public class DatabaseSession {
         appendEscaped(buffer, value);
         return buffer.toString();
     }
-
-    public static void log(ResultSet rs, int maxColumSize) throws SQLException {
-        int columns = rs.getMetaData().getColumnCount();
-        StringBuilder line = new StringBuilder();
+    public static void log(FileOutput report, ResultSet rs, int maxColumSize) throws SQLException, IOException {
+        int           columns = rs.getMetaData().getColumnCount();
+        StringBuilder line    = new StringBuilder();
 
         for (int i = 1; i <= columns; i++) {
             line.append(pad(rs, maxColumSize, i, rs.getMetaData().getColumnLabel(i)));
         }
-        Report.comment(null, line.toString());
+        report.writeLine(line.toString());
+        
         while (rs.next()) {
             line.setLength(0);
 
             for (int i = 1; i <= columns; i++) {
                 line.append(pad(rs, maxColumSize, i, rs.getString(i)));
             }
-            Report.comment(null, line.toString());
+            report.writeLine(line.toString());
         }
     }
 

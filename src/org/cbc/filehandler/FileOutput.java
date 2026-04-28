@@ -16,7 +16,7 @@ import org.cbc.utils.system.StringFormatter;
  *
  * @author chris
  */
-    public class FileOutput { 
+    public final class FileOutput { 
         public class FileOutputError extends RuntimeException {
             private static final long serialVersionUID = 1L;
 
@@ -30,6 +30,7 @@ import org.cbc.utils.system.StringFormatter;
             private boolean boolVal;
             private Date    dateVal;
             private double  dblVal;
+            private int     intVal;
             private String  format;
             private int     places;
 
@@ -42,8 +43,9 @@ import org.cbc.utils.system.StringFormatter;
                 boolVal = value;                
             }
             public Value(Date date, String datFormat) {
-                type   = "Date";
-                format = datFormat;
+                type    = "Date";
+                dateVal = date;
+                format  = datFormat;
             }
             public Value(Date date) {
                 this(date, "dd-MMM-yyy HH:mm");
@@ -53,9 +55,14 @@ import org.cbc.utils.system.StringFormatter;
                 this.dblVal = value;
                 this.places = places;
             }
+            public Value(int value) {
+                this.type   = "int";
+                this.intVal = value;
+            }
         }
-        public interface FieldValue {
+        public interface TableSource {
             public Value getValue(String id);
+            public void  setColumns(FileOutput log);
         }
         private class Column {
             private String id = "";
@@ -76,12 +83,13 @@ import org.cbc.utils.system.StringFormatter;
             }
         }
         private int               fldIndex;
-        private boolean           hdrOutput     = false;
-        private ArrayList<Column> columns       = new ArrayList<>();
+        private boolean           useHeader   = false;
+        private boolean           hdrOutput   = false;
+        private ArrayList<Column> columns     = new ArrayList<>();
         private StringFormatter   sf;
-        private String            root          = System.getenv("AR_ROOT");
-        private FileWriter        writer        = null;   
-        private FieldValue        valueProvider = null;
+        private String            root        = System.getenv("AR_ROOT");
+        private FileWriter        writer      = null;   
+        private TableSource       tableSource = null;
         /*
          * Adds field to the line string. 
          *
@@ -90,7 +98,7 @@ import org.cbc.utils.system.StringFormatter;
          * If columns are defined and fldIndex is beyond the last column, errorExit occurs.
          */
         private void append(String field) {
-            if (!columns.isEmpty()) {
+            if (!columns.isEmpty() && useHeader) {
                 if (fldIndex >= columns.size()) throw new FileOutputError("FileOutput field " + field + " exceeds maximum line fields " + columns.size());                
            
                 Column fld = columns.get(fldIndex++);
@@ -101,13 +109,15 @@ import org.cbc.utils.system.StringFormatter;
                     field = Utils.lpad(field, fld.width);                
             }
             sf.add(field);
+            
+            if (!useHeader) hdrOutput = false;
         }
         /*
          * If there are columns and they have not already output i.e hdrOutput is false, they are
          * output and hdrOutput is set to false.
          */
         private void outputHeader() throws IOException {
-            if (hdrOutput || columns.isEmpty()) return;
+            if (hdrOutput || columns.isEmpty() || !useHeader) return;
             
             fldIndex  = 0;
             hdrOutput = true; // Set here to prevent append causing a recursive loop as it call this method.
@@ -119,25 +129,27 @@ import org.cbc.utils.system.StringFormatter;
         }
         public boolean isFileOpen() {
             return writer != null;
-        }            
-        /*
-         * Sets StringFormatter separator. 
-         *
-         * Setting separator to the empty string is allowed, but possibly not useful. It can be more than one
-         * character, but again probably not useful.
-         */
-        public void setValueProvider(FieldValue provider) {
-            valueProvider = provider;
+        }
+        public void setTableSource(TableSource source) {
+            tableSource = source;
+            this.clearColumns();
+            source.setColumns(this);
         }
         /*
          * Defaults StringFormatter separator to ,
          */
         public FileOutput(String path, String separator, Date fileTime) throws IOException {
-            openFile(path, fileTime);            
-            sf = new StringFormatter(separator);
+            openFile(path, fileTime);         
+            setSeparator(separator);
         }
         public FileOutput(String path, String separator) throws IOException {
             this(path, separator, new Date());
+        }
+        public FileOutput(String path) throws IOException {
+            this(path, " ", new Date());
+        }
+        public void setSeparator(String separator) {            
+            sf = new StringFormatter(separator);
         }
         /*
          * The root directory to path for the expansion relative files. If path is the empty string the
@@ -189,7 +201,6 @@ import org.cbc.utils.system.StringFormatter;
             addColumn(id, "", -id.length());
         }
         public void add(String field) throws IOException {
-            outputHeader();
             append(field == null? "" : field);
         }
         public void add(Date field, String format) throws IOException {
@@ -201,14 +212,21 @@ import org.cbc.utils.system.StringFormatter;
         public void add(double field, int places) throws IOException {
             add(Utils.format(field, places));
         }
+        public void add(int field) throws IOException {
+            add(Utils.format(field));
+        }
         public void add(boolean field) throws IOException {            
             add(field? "Y" : "N");
         }
-        public void addFields() throws IOException {
-            if (valueProvider == null) throw new FileOutputError("addFields requires a values provider");
+        public void addTableRow() throws IOException {
+            
+            if (tableSource == null) throw new FileOutputError("addFields requires a table sourcr");
+            
+            useHeader = true;
+            outputHeader();
             
             for (Column col : columns) {
-                Value value = valueProvider.getValue(col.id);
+                Value value = tableSource.getValue(col.id);
                 
                 if (value == null) throw new FileOutputError("Field " + col.id + " did not return a value");
                 
@@ -225,20 +243,38 @@ import org.cbc.utils.system.StringFormatter;
                     case "double":
                         add(value.dblVal, value.places);
                         break;
+                    case "int":
+                        add(value.intVal);
+                        break;
                     default:
                         throw new FileOutputError("Data type " + value.type + " is not support");
                 }
             }
             writeLine();
+            useHeader = false;
         }
-        public void writeLine() throws IOException {            
-            writer.append(sf.getString() + "\n");
+        public void clearColumns() {
+            hdrOutput = false;
+            columns   = new ArrayList<>();
+        }
+        public void writeLine(String line) throws IOException {            
+            writer.append(line + "\n");
             writer.flush();
             sf.clear();
             fldIndex = 0;
         }
+        public void writeLine() throws IOException {  
+            writeLine(sf.getString());
+        }
+        public void write(String operation, java.lang.Exception exception) throws IOException {
+            writeLine("For " + operation + " Exception " + exception.getClass().getName() + "-" + exception);
+        }
+        public void write(java.lang.Exception exception) throws IOException {
+            writeLine("Exception " + exception.getClass().getName() + "-" + exception);
+        }
         public void close() throws IOException {
-            writer.close();
+            if (writer != null) writer.close();
+            
             writer = null;
         }
     }

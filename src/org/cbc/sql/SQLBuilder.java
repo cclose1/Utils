@@ -176,6 +176,9 @@ public abstract class SQLBuilder {
     public void setTable(String table) {
         this.table = table;
     }
+    public String getTable() {
+        return this.table;
+    }
     public void setProtocol(String protocol) {
         this.protocol = protocol;
     }

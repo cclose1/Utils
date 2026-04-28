@@ -2,10 +2,14 @@ package org.cbc.filehandler;
 
 import java.io.FileFilter;
 import java.io.IOException;
-import java.util.ArrayList;
 /*
  * This extension to java.io.File allows the default directory used to construct absolute path names to
  * be changed.
+ *
+ * The class object can be passed as a parameter where the argument is defined as java.io.File, however, only the overriden
+ * functions can be relied on to work. However, java.io.File methods, such as getPath(), that don't require the 
+ * the evaluation of the absolute path, such as isFile() should work. This is because the implementation of a method
+ * may use internal methods and will not necessarily use the overriden methods.
  */
 public class File extends java.io.File{
     private static final long   serialVersionUID = 1L;
@@ -29,14 +33,10 @@ public class File extends java.io.File{
      * This can be called with file set to this for the class object. It is important that file methods are not 
      * called that are overriden be the File class extending java.io.class, to avoid an infinite loop.
      */
-    static public String absolutePathFor(java.io.File file) { 
-        /*
-         * The following is done to ensure that the isAbsolute override is not called which will
-         * result in a 
-        */
-        java.io.File fl = new java.io.File(file.getPath());
+    static public String absolutePathFor(java.io.File file) {
+        java.io.File fl;
         
-        if (!fl.isAbsolute() && File.workingDirectory != null) {            
+        if (!file.isAbsolute() && File.workingDirectory != null) {            
             fl = new java.io.File(File.workingDirectory + (file.getParent() != null? java.io.File.separator + file.getParent() : ""), file.getName());
         } else {
             fl = new java.io.File(file.getParent(), file.getName());
@@ -83,6 +83,9 @@ public class File extends java.io.File{
         return File.absoluteFileFor(this).listFiles();
     }
     @Override
+    /*
+     * This differs from listFiles in that the file list returned are always absolute.
+     */
     public java.io.File[] listFiles(FileFilter filter) {
         return File.absoluteFileFor(this).listFiles(filter);
     }
@@ -92,6 +95,10 @@ public class File extends java.io.File{
     }
     @Override
     public boolean isFile() {
+        return File.absoluteFileFor(this).isFile();
+    }
+    @Override
+    public boolean exists() {
         return File.absoluteFileFor(this).isFile();
     }
 }

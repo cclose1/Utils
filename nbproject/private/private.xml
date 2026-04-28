@@ -10,8 +10,9 @@
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/CommandLineReader.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/utils/system/SecurityConfiguration.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/LogRates.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/json/JSONObject.java</file>
+            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/sql/SQLValue.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/LoadRates.java</file>
-            <file>file:/C:/MyFiles/Java/Utils/src/org/cbc/filehandler/FileReader.java</file>
             <file>file:/C:/MyFiles/Java/Utils/src/foreignexchange/CurrencyRates.java</file>
         </group>
     </open-files>

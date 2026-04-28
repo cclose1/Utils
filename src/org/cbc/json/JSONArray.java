@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import org.cbc.utils.data.EnhancedResultSet;
 
 
 /**
@@ -21,7 +22,7 @@ import java.util.Iterator;
 public class JSONArray implements Iterable<JSONValue> {
     ArrayList<JSONValue> array = new ArrayList<>();
 
-    private class ArrayIterator implements Iterator<JSONValue> {
+    public class ArrayIterator implements Iterator<JSONValue> {
         int     count     = 0;
         boolean canRemove = false;
         
@@ -53,6 +54,9 @@ public class JSONArray implements Iterable<JSONValue> {
             
             array.remove(--count);
             canRemove = false;
+        }
+        public int getIndex() {
+            return count - 1;
         }
     }
 
@@ -121,6 +125,13 @@ public class JSONArray implements Iterable<JSONValue> {
             throw new JSONException("Element " + index + " is out of bounds for the array");
         }
     }
+    public void set(int index, JSONValue value) throws JSONException {
+        try {
+            array.set(index, value);
+        } catch (IndexOutOfBoundsException e) {
+            throw new JSONException("Element " + index + " is out of bounds for the array");
+        }
+    }
     /**
      * Appends the array as a string to buffer formatted as defined by format.
      * @param buffer Target for the formatted string.
@@ -163,7 +174,7 @@ public class JSONArray implements Iterable<JSONValue> {
      * @param rs Result set containing fields.
      */
     private void addFields(ResultSet rs, JSONObject.DBOptions dbOptions) throws SQLException, JSONException, ParseException {        
-        JSONObject.DBRow dbRow = new JSONObject.DBRow(rs);
+        EnhancedResultSet dbRow = new EnhancedResultSet(rs);
              
         if (dbRow.nextRow()) {
             for (int i = 1; i <= dbRow.getColumnCount(); i++) {

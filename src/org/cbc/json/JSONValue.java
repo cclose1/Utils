@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.Date;
+import org.cbc.utils.data.EnhancedResultSet;
 import org.cbc.utils.system.DateFormatter;
 import org.cbc.utils.system.TimeWithDate;
 
@@ -162,7 +163,7 @@ public class JSONValue {
      * @param value
      */
     public JSONValue(float value) {
-        this.type = JSONType.Number;
+        this.type  = JSONType.Number;
         this.value = Float.toString(value);
     }
     /**
@@ -209,7 +210,6 @@ public class JSONValue {
                 this.value = value.toLowerCase();
             } else {
                 try {
-                    float f   = Float.parseFloat(value);
                     this.type = JSONType.Number;
                 } catch (Exception e) {
                     if (strictQuotes) throw new JSONException("Unable to convert '" + value + "' to a number");
@@ -233,7 +233,7 @@ public class JSONValue {
      * @param i
      * @param dbOptions 
      */
-    public JSONValue(JSONObject.DBRow row, JSONObject.DBOptions dbOptions) throws SQLException, ParseException { 
+    public JSONValue(EnhancedResultSet row, JSONObject.DBOptions dbOptions) throws SQLException, ParseException { 
         JSONValue  ret;
         
         String dbType  = row.getType();
@@ -331,7 +331,7 @@ public class JSONValue {
     public int getInt() throws JSONException {
         if (type != JSONType.Number) throw new JSONException(this, "Type is " + type + ". getInt requires type " + JSONType.Number);
         
-        return Integer.valueOf(value);
+        return Integer.parseInt(value);
     }
     public boolean getBoolean() throws JSONException {
         if (type != JSONType.Boolean) throw new JSONException(this, "Type is " + type + ". getBoolean requires type " + JSONType.Boolean);
@@ -348,7 +348,6 @@ public class JSONValue {
         
         return object;
     }
-
     /**
      * @return the array for the value.
      * 
@@ -530,6 +529,7 @@ public class JSONValue {
                 return value;                
         }
     }
+    @Override
     public String toString() {
         return toString(new JSONFormat());
     }

@@ -126,15 +126,37 @@ public class Utils {
         }
         return format(value, fmt);
     }
-    public static String lpad(String text, int size) {
-        while (text.length() < size) text = ' ' + text;
+    public static String format(int value) {
+        return "" + value;
+    }
+    public static String lpad(String text, char pad, int size) {
+        while (text.length() < size) text = pad + text;
         
         return text;
+    }
+    public static String lpad(String text, int size) {
+        return lpad(text, ' ', size);
     }
     public static String rpad(String text, int size) {
         while (text.length() < size) text += ' ';
         
         return text;
+    }
+    /*
+     * Hours contains a number of hours as a fraction, e.g. 1.5 is one hour and 30 minutes. A string
+     * of the form HH:MM:SS is returned fraction seconds are discared without rounding.
+    */
+    public static String hoursToTime(double time) {
+        int    fld    = (int) time;
+        String timStr = lpad(fld + "", '0', 2);
+        
+        time    = 60 * (time - fld);
+        fld     = (int) time;                    // Get minutes
+        timStr += ':' + lpad(fld + "", '0', 2);
+        fld     = (int) (60 * (time - fld));     // Get seconds
+        timStr += ':' + lpad(fld + "", '0', 2);         
+        
+        return timStr;
     }
     /*
      * This a workaround for dates that can be java.sql.Timesatamp or java.Util.Date.

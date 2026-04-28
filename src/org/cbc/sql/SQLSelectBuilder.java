@@ -135,6 +135,9 @@ public class SQLSelectBuilder extends SQLBuilder {
     public void setFrom(String from) {
         this.from = from;
     }
+    public String setFrom() {
+        return this.from;
+    }
     public void addOrderByField(String name, boolean desc) {
         if (orderBy == null)
             orderBy = "";
